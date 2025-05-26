@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            background-color: #f4f4f4;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background-color: #003366;
+            color: white;
+            padding: 20px;
+            position: fixed;
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+        .sidebar ul li {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .sidebar ul li a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            cursor: pointer;
+        }
+
+        .sidebar ul li a:hover {
+            background-color: #0056b3;
+            padding-left: 10px;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .header {
+            background-color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .logout-btn {
+            background: red;
+            color: white;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        /* Styling for Manage Students Section */
+        .manage-students {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .manage-students h2 {
+            margin-bottom: 15px;
+            color: #003366;
+        }
+
+        .manage-students input,
+        .manage-students select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .manage-students button {
+            background: #4A90E2;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .manage-students button:hover {
+            background: #357ABD;
+        }
+
+        .student-list {
+            margin-top: 20px;
+            border-top: 2px solid #ddd;
+            padding-top: 10px;
+        }
+
+        .student-list div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .student-list button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        .edit-btn {
+            background: #FFA500;
+            color: white;
+        }
+
+        .delete-btn {
+            background: #FF0000;
+            color: white;
+        }
+
+        /* Manage Attendance Section */
+.manage-attendance {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.attendance-controls {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.attendance-controls label {
+    font-weight: bold;
+}
+
+.attendance-controls input[type="date"] {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.attendance-table table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.attendance-table th,
+.attendance-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+.attendance-table th {
+    background: #003366;
+    color: white;
+    font-weight: bold;
+}
+
+.attendance-table button {
+    padding: 8px 12px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.present-btn {
+    background: #4CAF50;
+    color: white;
+}
+
+.absent-btn {
+    background: #FF0000;
+    color: white;
+}
+
+.manage-attendance button[onclick="saveAttendance()"] {
+    background: #4A90E2;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 200px;
+}
+
+.manage-attendance button[onclick="saveAttendance()"]:hover {
+    background: #357ABD;
+}
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Teacher Panel</h2>
+        <ul>
+            <li><a href="#dashboard" onclick="showSection('dashboard')">Dashboard</a></li>
+            <li><a href="#manage-students" onclick="showSection('manage-students')">Manage Students</a></li>
+            <li><a href="#manage-attendance" onclick="showSection('manage-attendance')">Manage Attendance</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h2>Teacher Dashboard</h2>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard">
+            <div class="dashboard-cards">
+                <div class="card">
+                    <h3>Students</h3>
+                    <p id="total-students">Loading...</p> <!-- Total Students -->
+                </div>
+                <div class="card">
+                    <h3>Attendance</h3>
+                    <p id="total-attendance">Loading...</p> <!-- Total Attendance -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Students Section -->
+        <div id="manage-students" class="manage-students" style="display: none;">
+            <h2>Manage Students</h2>
+            <div class="student-list" id="student-list">
+                <h2>Students in Your Class</h2>
+                <!-- Students will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Manage Attendance Section -->
+    <!-- Manage Attendance Section -->
+<div id="manage-attendance" class="manage-attendance" style="display: none;">
+    <h2>Manage Attendance</h2>
+    <div class="attendance-controls">
+        <label for="attendance-date">Select Date:</label>
+        <input type="date" id="attendance-date" onchange="fetchAttendanceForDate()" required>
+    </div>
+    <div class="attendance-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Roll No</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="attendance-student-list">
+                <!-- Students will be displayed here -->
+            </tbody>
+        </table>
+    </div>
+    <button onclick="saveAttendance()">Save Attendance</button>
+</div>
+
+    <!-- Firebase -->
+    <script type="module">
+        import { 
+    initializeApp 
+} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import { 
+    getFirestore, 
+    collection, 
+    getDocs, 
+    doc, 
+    getDoc, 
+    deleteDoc,
+    updateDoc,
+    query, // Add this import
+    where, // Add this import
+    addDoc // Add this import
+} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+import { 
+    getAuth, 
+    signOut,
+    onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
+    
+        const firebaseConfig = { 
+            apiKey: "AIzaSyCnNDrfQexuEyMXMKGCv_CMf1jfDtqLmuw",
+            authDomain: "student-attendance-mangament.firebaseapp.com",
+            projectId: "student-attendance-mangament",
+            storageBucket: "student-attendance-mangament.appspot.com",
+            messagingSenderId: "899024610963",
+            appId: "1:899024610963:web:9e9654f79078f309078f66"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+    
+        // Listen for authentication state changes
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in
+                console.log("User is signed in:", user.uid);
+                showSection("dashboard"); // Show the dashboard section by default
+            } else {
+                // User is not signed in, redirect to login page
+                console.log("User is not signed in. Redirecting to login page...");
+                window.location.href = "login.html";
+            }
+        });
+    
+        // Fetch dashboard data
+        async function fetchDashboardData() {
+    console.log("Fetching dashboard data...");
+
+    try {
+        const teacher = auth.currentUser;
+        if (!teacher) {
+            console.error("No authenticated teacher found.");
+            return;
+        }
+
+        // Fetch teacher's data from the `users` collection
+        const teacherDoc = await getDoc(doc(db, "users", teacher.uid));
+        if (!teacherDoc.exists()) {
+            console.error("Teacher document does not exist.");
+            alert("Teacher document not found. Please contact the admin.");
+            return;
+        }
+
+        const classId = teacherDoc.data().classId;
+        if (!classId) {
+            console.error("classId is missing in the teacher's document.");
+            alert("Class ID is missing. Please contact the admin.");
+            return;
+        }
+
+        // Fetch students in the teacher's class
+        const studentsSnapshot = await getDocs(collection(db, "students"));
+        const studentsInClass = studentsSnapshot.docs.filter(doc => doc.data().classId === classId);
+
+        // Update the dashboard
+        document.getElementById("total-students").innerText = studentsInClass.length;
+        document.getElementById("total-attendance").innerText = "0"; // Placeholder for attendance
+
+        console.log("Dashboard data updated!");
+    } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        alert("Error fetching dashboard data. Please try again.");
+    }
+}
+    
+        // Fetch students in the teacher's class
+        async function fetchStudents() {
+    const studentList = document.getElementById("student-list");
+    studentList.innerHTML = "<h2>Students in Your Class</h2>"; // Reset list
+
+    try {
+        const teacher = auth.currentUser;
+        if (!teacher) {
+            console.error("No authenticated teacher found.");
+            return;
+        }
+
+        // Fetch teacher's data from the `users` collection
+        const teacherDoc = await getDoc(doc(db, "users", teacher.uid));
+        if (!teacherDoc.exists()) {
+            console.error("Teacher document does not exist.");
+            alert("Teacher document not found. Please contact the admin.");
+            return;
+        }
+
+        const classId = teacherDoc.data().classId;
+        if (!classId) {
+            console.error("classId is missing in the teacher's document.");
+            alert("Class ID is missing. Please contact the admin.");
+            return;
+        }
+
+        // Fetch students in the teacher's class
+        const studentsSnapshot = await getDocs(collection(db, "students"));
+        const studentsInClass = studentsSnapshot.docs.filter(doc => doc.data().classId === classId);
+
+        if (studentsInClass.length === 0) {
+            studentList.innerHTML += "<p>No students found in your class.</p>";
+        } else {
+            studentsInClass.forEach((studentDoc) => {
+                const studentData = studentDoc.data();
+                const studentItem = document.createElement("div");
+                studentItem.innerHTML = `
+                    <p><strong>${studentData.firstName} ${studentData.lastName}</strong></p>
+                    <p>Roll No: ${studentData.rollNo}</p>
+                    <p>Email: ${studentData.email}</p>
+                    <p>Phone: ${studentData.phone}</p>
+                    <button class="edit-btn" onclick="editStudent('${studentDoc.id}')">Edit</button>
+                    <button class="delete-btn" onclick="deleteStudent('${studentDoc.id}')">Delete</button>
+                `;
+                studentList.appendChild(studentItem);
+            });
+        }
+    } catch (error) {
+        console.error("Error fetching students:", error);
+        alert("Error fetching students. Please try again.");
+    }
+}
+    
+        // Edit student
+        window.editStudent = async function (studentId) {
+            const newFirstName = prompt("Enter new first name:");
+            const newLastName = prompt("Enter new last name:");
+            const newRollNo = prompt("Enter new roll number:");
+            const newEmail = prompt("Enter new email:");
+            const newPhone = prompt("Enter new phone number:");
+    
+            if (newFirstName && newLastName && newRollNo && newEmail && newPhone) {
+                try {
+                    await updateDoc(doc(db, "students", studentId), {
+                        firstName: newFirstName,
+                        lastName: newLastName,
+                        rollNo: newRollNo,
+                        email: newEmail,
+                        phone: newPhone
+                    });
+                    alert("Student updated successfully!");
+                    fetchStudents(); // Refresh the student list
+                } catch (error) {
+                    console.error("Error updating student:", error);
+                    alert("Error updating student. Please try again.");
+                }
+            } else {
+                alert("All fields are required!");
+            }
+        };
+    
+        // Delete student
+        window.deleteStudent = async function (studentId) {
+            const confirmDelete = confirm("Are you sure you want to delete this student?");
+            if (confirmDelete) {
+                try {
+                    await deleteDoc(doc(db, "students", studentId));
+                    alert("Student deleted successfully!");
+                    fetchStudents(); // Refresh the student list
+                } catch (error) {
+                    console.error("Error deleting student:", error);
+                    alert("Error deleting student. Please try again.");
+                }
+            }
+        };
+    
+        // Fetch attendance records
+        // Fetch attendance records
+async function fetchAttendance() {
+    const attendanceList = document.getElementById("attendance-student-list"); // Correct ID
+    attendanceList.innerHTML = ""; // Reset list
+
+    try {
+        const teacher = auth.currentUser;
+        if (!teacher) {
+            console.error("No authenticated teacher found.");
+            return;
+        }
+
+        // Fetch teacher's data from the `users` collection
+        const teacherDoc = await getDoc(doc(db, "users", teacher.uid));
+        if (!teacherDoc.exists()) {
+            console.error("Teacher document does not exist.");
+            alert("Teacher document not found. Please contact the admin.");
+            return;
+        }
+
+        const classId = teacherDoc.data().classId;
+        if (!classId) {
+            console.error("classId is missing in the teacher's document.");
+            alert("Class ID is missing. Please contact the admin.");
+            return;
+        }
+
+        // Fetch students in the teacher's class
+        const studentsSnapshot = await getDocs(collection(db, "students"));
+        const studentsInClass = studentsSnapshot.docs.filter(doc => doc.data().classId === classId);
+
+        if (studentsInClass.length === 0) {
+            attendanceList.innerHTML = "<tr><td colspan='4'>No students found in your class.</td></tr>";
+        } else {
+            studentsInClass.forEach((studentDoc) => {
+                const studentData = studentDoc.data();
+                const row = document.createElement("tr");
+                row.setAttribute("data-student-id", studentDoc.id); // Add student ID to the row
+                row.innerHTML = `
+                    <td>${studentData.firstName} ${studentData.lastName}</td>
+                    <td>${studentData.rollNo}</td>
+                    <td>Unmarked</td> <!-- Default status -->
+                    <td>
+                        <button class="present-btn" onclick="markAttendance('${studentDoc.id}', 'present')">Present</button>
+                        <button class="absent-btn" onclick="markAttendance('${studentDoc.id}', 'absent')">Absent</button>
+                    </td>
+                `;
+                attendanceList.appendChild(row);
+            });
+        }
+    } catch (error) {
+        console.error("Error fetching attendance:", error);
+        alert("Error fetching attendance. Please try again.");
+    }
+}
+
+// Function to fetch attendance for the selected date
+// Function to fetch attendance for the selected date
+window.fetchAttendanceForDate = async function () {
+    const date = document.getElementById("attendance-date").value;
+    if (!date) return; // Exit if no date is selected
+
+    const attendanceList = document.getElementById("attendance-student-list");
+    attendanceList.innerHTML = ""; // Clear previous list
+
+    try {
+        const teacher = auth.currentUser;
+        if (!teacher) {
+            console.error("No authenticated teacher found.");
+            return;
+        }
+
+        // Fetch teacher's data from the `users` collection
+        const teacherDoc = await getDoc(doc(db, "users", teacher.uid));
+        if (!teacherDoc.exists()) {
+            console.error("Teacher document does not exist.");
+            alert("Teacher document not found. Please contact the admin.");
+            return;
+        }
+
+        const classId = teacherDoc.data().classId;
+        if (!classId) {
+            console.error("classId is missing in the teacher's document.");
+            alert("Class ID is missing. Please contact the admin.");
+            return;
+        }
+
+        // Fetch students in the teacher's class
+        const studentsSnapshot = await getDocs(collection(db, "students"));
+        const studentsInClass = studentsSnapshot.docs.filter(doc => doc.data().classId === classId);
+
+        if (studentsInClass.length === 0) {
+            attendanceList.innerHTML = "<tr><td colspan='4'>No students found in your class.</td></tr>";
+        } else {
+            for (const studentDoc of studentsInClass) {
+                const studentData = studentDoc.data();
+                const studentId = studentDoc.id;
+
+                // Fetch attendance for the selected date
+                const attendanceQuery = query(
+                    collection(db, "attendance"),
+                    where("studentId", "==", studentId),
+                    where("date", "==", date)
+                );
+                const attendanceSnapshot = await getDocs(attendanceQuery);
+
+                const status = attendanceSnapshot.empty ? "Unmarked" : attendanceSnapshot.docs[0].data().status;
+
+                // Create a row for the student
+                const row = document.createElement("tr");
+                row.setAttribute("data-student-id", studentId);
+                row.innerHTML = `
+                    <td>${studentData.firstName} ${studentData.lastName}</td>
+                    <td>${studentData.rollNo}</td>
+                    <td>${status}</td>
+                    <td>
+                        <button class="present-btn" onclick="markAttendance('${studentId}', 'present')">Present</button>
+                        <button class="absent-btn" onclick="markAttendance('${studentId}', 'absent')">Absent</button>
+                    </td>
+                `;
+                attendanceList.appendChild(row);
+            }
+        }
+    } catch (error) {
+        console.error("Error fetching attendance for date:", error);
+        alert("Error fetching attendance for date. Please try again.");
+    }
+};
+
+
+// Function to mark attendance for a student
+window.markAttendance = function (studentId, status) {
+    const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
+    if (row) {
+        row.querySelector("td:nth-child(3)").innerText = status; // Update status in the table
+    }
+};
+
+
+// Function to save attendance
+// Function to save attendance
+window.saveAttendance = async function () {
+    const date = document.getElementById("attendance-date").value;
+    if (!date) {
+        alert("Please select a date!");
+        return;
+    }
+
+    const studentRows = document.querySelectorAll("#attendance-student-list tr");
+    if (studentRows.length === 0) {
+        alert("No students found to mark attendance!");
+        return;
+    }
+
+    try {
+        // Save attendance for each student
+        for (const row of studentRows) {
+            const studentId = row.getAttribute("data-student-id");
+            const status = row.querySelector("td:nth-child(3)").innerText;
+
+            // Check if attendance already exists for the date
+            const attendanceQuery = query(
+                collection(db, "attendance"),
+                where("studentId", "==", studentId),
+                where("date", "==", date)
+            );
+            const attendanceSnapshot = await getDocs(attendanceQuery);
+
+            if (attendanceSnapshot.empty) {
+                // Add new attendance record
+                await addDoc(collection(db, "attendance"), {
+                    studentId,
+                    date,
+                    status,
+                });
+            } else {
+                // Update existing attendance record
+                const attendanceId = attendanceSnapshot.docs[0].id;
+                await updateDoc(doc(db, "attendance", attendanceId), {
+                    status,
+                });
+            }
+        }
+
+        alert("Attendance saved successfully!");
+    } catch (error) {
+        console.error("Error saving attendance:", error);
+        alert("Error saving attendance. Please try again.");
+    }
+};
+
+    
+window.showSection = function (sectionId) {
+    // Hide all sections
+    document.querySelectorAll(".main-content > div").forEach((section) => {
+        section.style.display = "none";
+    });
+
+    // Show the selected section
+    document.getElementById(sectionId).style.display = "block";
+
+    // Fetch data for specific sections
+    if (sectionId === "dashboard") {
+        fetchDashboardData(); // Fetch and update dashboard data
+    }
+    if (sectionId === "manage-students") {
+        fetchStudents(); // Fetch students in the teacher's class
+    }
+    if (sectionId === "manage-attendance") {
+        fetchAttendance(); // Fetch attendance records
+        fetchAttendanceForDate(); // Fetch attendance for the selected date
+    }
+};
+    
+        // Set default screen to Dashboard
+        window.onload = () => {
+            // Listen for authentication state changes
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // User is signed in
+                    console.log("User is signed in:", user.uid);
+                    showSection("dashboard"); // Show the dashboard section by default
+                } else {
+                    // User is not signed in, redirect to login page
+                    console.log("User is not signed in. Redirecting to login page...");
+                    window.location.href = "login.html";
+                }
+            });
+        };
+    </script>
+</body>
+</html>

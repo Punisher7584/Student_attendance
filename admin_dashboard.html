@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Admin Panel</h2>
+        <ul>
+            <li><a href="#dashboard" onclick="showSection('dashboard')">Dashboard</a></li>
+            <li class="has-submenu" aria-haspopup="true" aria-expanded="false">
+                <a href="#" onclick="toggleSubmenu(this.parentElement, event)">Manage Classes</a>
+                <ul class="submenu">
+                    <li><a href="#create-class" onclick="showSection('create-class')">Create Class</a></li>
+                    <li><a href="#add-semesters" onclick="showSection('add-semesters')">Add Semesters</a></li>
+                </ul>
+            </li>
+            <li><a href="#manage-teachers" onclick="showSection('manage-teachers')">Manage Teachers</a></li>
+            <li><a href="#manage-students" onclick="showSection('manage-students')">Manage Students</a></li>
+            <li><a href="#attendance" onclick="showSection('attendance')">Attendance</a></li>
+            <li><a href="#">Settings</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h2>Administrator Dashboard</h2>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard">
+            <div class="dashboard-cards">
+                <div class="card">
+                    <h3>Students</h3>
+                    <p id="total-students">Loading...</p>
+                </div>
+                <div class="card">
+                    <h3>Teachers</h3>
+                    <p id="total-teachers">Loading...</p>
+                </div>
+                <div class="card">
+                    <h3>Classes</h3>
+                    <p id="total-classes">Loading...</p>
+                </div>
+                <div class="card">
+                    <h3>Total Attendance</h3>
+                    <p id="total-attendance">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Class Section -->
+        <div id="create-class" class="manage-classes" style="display: none;">
+            <div class="class-management-container">
+                <div class="create-class-section">
+                    <h2>Create Class</h2>
+                    <input type="text" id="class-name" placeholder="Class Name">
+                    <button onclick="addClass()">Save Class</button>
+                </div>
+            </div>
+            
+            <div class="class-list-container">
+                <h2>Saved Classes</h2>
+                <div id="class-list">
+                    <!-- Classes will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Semesters Section -->
+        <div id="add-semesters" class="manage-classes" style="display: none;">
+            <div class="class-management-container">
+                <div class="create-semester-section">
+                    <h2>Add Semester to Class</h2>
+                    <select id="semester-class-select" onchange="loadClassSemesters()">
+                        <option value="">Select Class</option>
+                    </select>
+                    <input type="text" id="semester-name" placeholder="Semester Name">
+                    <button onclick="addSemester()">Add Semester</button>
+                </div>
+            </div>
+            
+            <div class="class-list-container">
+                <h2>Saved Classes & Semesters</h2>
+                <div id="semester-list">
+                    <!-- Classes with semesters will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Teachers Section -->
+        <!-- Manage Teachers Section -->
+        <div id="manage-teachers" class="manage-teachers" style="display: none;">
+            <h2>Create Teacher</h2>
+            <form id="teacher-form">
+                <input type="text" id="first-name" placeholder="First Name" required>
+                <input type="text" id="last-name" placeholder="Last Name" required>
+                <input type="email" id="email" placeholder="Email Address" required>
+                <input type="tel" id="phone" placeholder="Phone Number" required>
+                <button type="submit">Save Teacher</button>
+            </form>
+        
+            <h2>Assign Teacher to Classes/Semesters</h2>
+            <form id="teacher-assignment-form">
+                <select id="assignment-teacher" required>
+                    <option value="">Select Teacher</option>
+                </select>
+                <select id="assignment-class" required onchange="loadAssignmentSemesters(this.value)">
+                    <option value="">Select Class</option>
+                </select>
+                <select id="assignment-semester" required onchange="loadAssignmentSubjects(this.value)">
+                    <option value="">Select Semester</option>
+                </select>
+                <div id="subject-checkboxes" style="display: none;">
+                    <h4>Select Subjects:</h4>
+                    <!-- Subjects will be loaded here as checkboxes -->
+                </div>
+                <button type="button" onclick="assignTeacher()">Assign Teacher</button>
+            </form>
+        
+            <div class="teacher-list" id="teacher-list">
+                <h2>Saved Teachers</h2>
+            </div>
+        </div>
+
+        <!-- Manage Students Section -->
+        <div id="manage-students" class="manage-students" style="display: none;">
+            <h2>Create Student</h2>
+            <form id="student-form">
+                <input type="text" id="student-first-name" placeholder="First Name" required>
+                <input type="text" id="student-last-name" placeholder="Last Name" required>
+                <input type="number" id="student-roll-no" placeholder="Roll No" required>
+                <input type="email" id="student-email" placeholder="Email Address" required>
+                <input type="tel" id="student-phone" placeholder="Phone Number" required>
+                <select id="student-class" required>
+                    <option value="">Select Class</option>
+                </select>
+                <button type="submit">Save Student</button>
+            </form>
+            <div class="student-list" id="student-list">
+                <h2>Saved Students</h2>
+            </div>
+        </div>
+
+        <!-- Attendance Section -->
+        <div id="attendance" class="attendance" style="display: none;">
+            <h2>Mark Attendance</h2>
+            <div class="attendance-controls">
+                <label for="attendance-class">Select Class:</label>
+                <select id="attendance-class" onchange="fetchStudentsForAttendance()">
+                    <option value="">Select Class</option>
+                </select>
+                <label for="attendance-date">Select Date:</label>
+                <input type="date" id="attendance-date" required>
+            </div>
+            <div class="attendance-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Roll No</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendance-student-list">
+                    </tbody>
+                </table>
+            </div>
+            <button onclick="saveAttendance()">Save Attendance</button>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settings" class="settings" style="display: none;">
+            <h2>Settings</h2>
+            <p>Coming soon...</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>

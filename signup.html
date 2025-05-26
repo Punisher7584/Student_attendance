@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up | Student Attendance System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .signup-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 350px;
+        }
+
+        .signup-container img {
+            width: 60px;
+            margin-bottom: 15px;
+        }
+
+        .signup-container h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .signup-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+            border: none;
+            width: 100%;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .signup-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .login-link {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .login-link a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="signup-container">
+    <img src="https://cdn-icons-png.flaticon.com/512/3177/3177440.png" alt="Logo">
+    <h2>STUDENT ATTENDANCE SYSTEM</h2>
+    <p>Sign-Up Panel</p>
+
+    <select id="role">
+        <option value="">-- Select User Role --</option>
+        <option value="admin">Admin</option>
+        <option value="teacher">Teacher</option>
+        <option value="student">Student</option>
+    </select>
+
+    <input type="email" id="email" placeholder="Enter Email">
+    <input type="password" id="password" placeholder="Enter Password">
+
+    <button class="signup-btn" onclick="register()">Sign Up</button>
+
+    <!-- Already have an account? Login Link -->
+    <p class="login-link">Already have an account? <a href="login.html">Login</a></p>
+</div>
+
+<script type="module">
+    // Import Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+    import { 
+        getAuth, 
+        createUserWithEmailAndPassword,
+        fetchSignInMethodsForEmail 
+    } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
+    import { 
+        getFirestore, 
+        doc, 
+        setDoc, 
+        collection, 
+        query, 
+        where, 
+        getDocs 
+    } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+
+    // Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyCnNDrfQexuEyMXMKGCv_CMf1jfDtqLmuw",
+        authDomain: "student-attendance-mangament.firebaseapp.com",
+        projectId: "student-attendance-mangament",
+        storageBucket: "student-attendance-mangament.appspot.com",
+        messagingSenderId: "899024610963",
+        appId: "1:899024610963:web:9e9654f79078f309078f66"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Function to Register Users
+    window.register = async function () {
+    let email = document.getElementById("email").value.trim();
+    let password = document.getElementById("password").value;
+    let role = document.getElementById("role").value;
+
+    // Validation
+    if (!email || !password || !role) {
+        alert("Please fill all fields!");
+        return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        alert("Please enter a valid email address!");
+        return;
+    }
+
+    if (password.length < 6) {
+        alert("Password must be at least 6 characters long!");
+        return;
+    }
+
+    try {
+        // For all roles, first check if email already exists
+        const methods = await fetchSignInMethodsForEmail(auth, email);
+        if (methods.length > 0) {
+            alert("This email is already registered!");
+            return;
+        }
+
+        // Teacher-specific verification
+        if (role === "teacher") {
+            const teachersQuery = query(
+                collection(db, "teachers"), 
+                where("email", "==", email)
+            );
+            const teachersSnapshot = await getDocs(teachersQuery);
+
+            if (teachersSnapshot.empty) {
+                alert("You must be added as a teacher by admin first.");
+                return;
+            }
+
+            const teacherData = teachersSnapshot.docs[0].data();
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            
+            // Create user document with additional teacher info
+            await setDoc(doc(db, "users", userCredential.user.uid), {
+                email: email,
+                role: role,
+                firstName: teacherData.firstName,
+                lastName: teacherData.lastName,
+                phone: teacherData.phone,
+                classId: teacherData.classId,
+                createdAt: new Date()
+            });
+
+            alert("Teacher registration complete!");
+            window.location.href = "login.html";
+            return;
+        }
+
+        // Admin registration - only allow specific emails
+        if (role === "admin") {
+            const allowedAdminEmails = ["admin@school.edu", "principal@school.edu"];
+            if (!allowedAdminEmails.includes(email)) {
+                alert("Only authorized emails can register as admin");
+                return;
+            }
+        }
+
+        // For students and authorized admins
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+            email: email,
+            role: role,
+            createdAt: new Date(),
+            ...(role === "student" && { 
+                // Additional student fields if needed
+            })
+        });
+
+        alert("Registration successful!");
+        window.location.href = "login.html";
+
+    } catch (error) {
+        console.error("Registration error:", error);
+        
+        // User-friendly error messages
+        let message = "Registration failed. ";
+        switch(error.code) {
+            case "auth/email-already-in-use":
+                message += "Email already registered.";
+                break;
+            case "auth/weak-password":
+                message += "Password is too weak.";
+                break;
+            default:
+                message += error.message;
+        }
+        
+        alert(message);
+    }
+};
+</script>
+
+
+</body>
+</html>

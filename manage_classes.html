@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Classes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            margin-left: 250px;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        .manage-classes {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Manage Classes</h2>
+    <input type="text" id="class-name" placeholder="Class Name">
+    <button onclick="addClass()">Save</button>
+    <div class="class-list" id="class-list"></div>
+
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyCnNDrfQexuEyMXMKGCv_CMf1jfDtqLmuw",
+            authDomain: "student-attendance-mangament.firebaseapp.com",
+            projectId: "student-attendance-mangament",
+            storageBucket: "student-attendance-mangament.appspot.com",
+            messagingSenderId: "899024610963",
+            appId: "1:899024610963:web:9e9654f79078f309078f66" 
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        async function addClass() {
+            const className = document.getElementById("class-name").value.trim();
+            if (className !== "") {
+                await addDoc(collection(db, "classes"), { name: className });
+                document.getElementById("class-name").value = "";
+                fetchClasses();
+            }
+        }
+
+        async function fetchClasses() {
+            const classesSnapshot = await getDocs(collection(db, "classes"));
+            const classList = document.getElementById("class-list");
+            classList.innerHTML = "";
+
+            classesSnapshot.forEach(doc => {
+                const classItem = `<div><p>${doc.data().name}</p></div>`;
+                classList.innerHTML += classItem;
+            });
+        }
+
+        window.onload = () => fetchClasses();
+    </script>
+</body>
+</html>

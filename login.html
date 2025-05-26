@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Student Attendance System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 350px;
+        }
+
+        .login-container img {
+            width: 60px;
+            margin-bottom: 15px;
+        }
+
+        .login-container h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .login-btn {
+            background-color: #28a745;
+            color: white;
+            padding: 10px;
+            border: none;
+            width: 100%;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .login-btn:hover {
+            background-color: #218838;
+        }
+
+        .signup-link {
+            margin-top: 15px;
+        }
+
+        .signup-link a {
+            color: #007bff;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .signup-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <img src="https://cdn-icons-png.flaticon.com/512/3177/3177440.png" alt="Logo">
+    <h2>STUDENT ATTENDANCE SYSTEM</h2>
+    <p>Login Panel</p>
+
+    <select id="role">
+        <option value="">-- Select User Role --</option>
+        <option value="admin">Admin</option>
+        <option value="teacher">Teacher</option>
+        <option value="student">Student</option>
+    </select>
+
+    <input type="email" id="email" placeholder="Enter Email">
+    <input type="password" id="password" placeholder="Enter Password">
+
+    <button class="login-btn" onclick="login()">Login</button>
+
+    <!-- Signup Link -->
+    <p class="signup-link">Don't have an account? <a href="signup.html">Sign Up</a></p>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+
+    // Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyCnNDrfQexuEyMXMKGCv_CMf1jfDtqLmuw",
+        authDomain: "student-attendance-mangament.firebaseapp.com",
+        projectId: "student-attendance-mangament",
+        storageBucket: "student-attendance-mangament.appspot.com",
+        messagingSenderId: "899024610963",
+        appId: "1:899024610963:web:9e9654f79078f309078f66"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    window.login = async function () {
+    let email = document.getElementById("email").value;
+    let password = document.getElementById("password").value;
+    let role = document.getElementById("role").value;
+
+    if (email === "" || password === "" || role === "") {
+        alert("Please fill all fields!");
+        return;
+    }
+
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        console.log("User logged in:", user.uid);
+
+        // Fetch user role from Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+
+        if (userDoc.exists()) {
+            const userData = userDoc.data();
+            console.log("User role from Firestore:", userData.role);
+
+            if (userData.role === role) {
+                if (role === "admin") {
+                    alert("Admin login successful!");
+                    window.location.href = "admin_dashboard.html"; // Redirect to Admin Dashboard
+                } else if (role === "teacher") {
+                    alert("Teacher login successful!");
+                    window.location.href = "teacher_dashboard.html"; // Redirect to Teacher Dashboard
+                } else if (role === "student") {
+                    alert("Student login successful!");
+                    window.location.href = "student_dashboard.html"; // Redirect to Student Dashboard
+                }
+            } else {
+                alert("Incorrect role selected!");
+            }
+        } else {
+            alert("User role not found in database!");
+        }
+    } catch (error) {
+        if (error.code === "auth/wrong-password") {
+            alert("Incorrect password. Please try again.");
+        } else if (error.code === "auth/user-not-found") {
+            alert("User not found. Please sign up.");
+        } else {
+            alert("Login Failed: " + error.message);
+        }
+    }
+};
+</script>
+
+
+</body>
+</html>

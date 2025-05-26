@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Admin Panel</h2>
+        <ul>
+            <li><a href="#dashboard" onclick="showSection('dashboard')">Dashboard</a></li>
+            <li><a href="#manage-classes" onclick="showSection('manage-classes')">Manage Classes</a></li>
+            <li><a href="#manage-teachers" onclick="showSection('manage-teachers')">Manage Teachers</a></li>
+            <li><a href="#manage-subjects" onclick="showSection('manage-subjects')">Manage Subjects</a></li>
+            <li><a href="#manage-students" onclick="showSection('manage-students')">Manage Students</a></li>
+            <li><a href="#attendance" onclick="showSection('attendance')">Attendance</a></li>
+            <li><a href="#">Settings</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h2>Administrator Dashboard</h2>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard">
+            <div class="dashboard-cards">
+                <div class="card">
+                    <h3>Students</h3>
+                    <p id="total-students">Loading...</p>
+                </div>
+                <div class="card">
+                    <h3>Teachers</h3>
+                    <p id="total-teachers">Loading...</p>
+                </div>
+                <div class="card">
+                    <h3>Classes</h3>
+                    <p id="total-classes">Loading...</p>
+                </div>
+                <div class="card">
+                    <h3>Total Attendance</h3>
+                    <p id="total-attendance">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Classes Section -->
+        <!-- Manage Classes Section -->
+<div id="manage-classes" class="manage-classes" style="display: none;">
+    <h2>Create Classes</h2>
+    <div class="class-form">
+        <input type="text" id="class-name" placeholder="Class Name" required>
+        <div class="semester-controls">
+            <h3>Add Semesters</h3>
+            <div id="semester-inputs">
+                <input type="text" class="semester-name" placeholder="Semester Name">
+            </div>
+            <button type="button" onclick="addSemesterInput()">+ Add Another Semester</button>
+        </div>
+        <button onclick="addClassWithSemesters()">Save Class</button>
+    </div>
+    
+    <div class="class-list">
+        <h2>Saved Classes</h2>
+        <div id="class-list">
+            <!-- Classes will be populated here -->
+        </div>
+    </div>
+</div>
+        </div>
+
+        <!-- Manage Teachers Section -->
+        <div id="manage-teachers" class="manage-teachers" style="display: none;">
+            <h2>Create Teacher</h2>
+            <form id="teacher-form">
+                <input type="text" id="first-name" placeholder="First Name" required>
+                <input type="text" id="last-name" placeholder="Last Name" required>
+                <input type="email" id="email" placeholder="Email Address" required>
+                <input type="tel" id="phone" placeholder="Phone Number" required>
+                <select id="teacher-class" required>
+                    <option value="">Select Class</option>
+                </select>
+                <button type="submit">Save Teacher</button>
+            </form>
+            <div class="teacher-list" id="teacher-list">
+                <h2>Saved Teachers</h2>
+            </div>
+        </div>
+
+
+
+
+        <!-- Manage Subjects Section -->
+<div id="manage-subjects" class="manage-subjects" style="display: none;">
+    <h2>Manage Subjects</h2>
+    
+    <div class="subject-controls">
+        <label for="subject-class">Select Class:</label>
+        <select id="subject-class" onchange="fetchSemestersForClass()">
+            <option value="">Select Class</option>
+        </select>
+        
+        <label for="subject-semester">Select Semester:</label>
+        <select id="subject-semester" onchange="fetchSubjectsForClassSemester()">
+            <option value="">Select Semester</option>
+        </select>
+    </div>
+    
+    <div class="add-subject-section">
+        <h3>Add Subjects</h3>
+        <div class="subject-input">
+            <select id="existing-subjects">
+                <option value="">Select from existing subjects</option>
+            </select>
+            <span>OR</span>
+            <input type="text" id="new-subject" placeholder="Enter new subject name">
+            <button onclick="addSubjectToClassSemester()">Add Subject</button>
+        </div>
+    </div>
+    
+    <div class="subject-list" id="subject-list">
+        <h3>Current Subjects in Selected Class/Semester</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject Name</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="current-subjects-table">
+                <!-- Subjects will be populated here -->
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="add-semester-section">
+        <h3>Add New Semester</h3>
+        <input type="text" id="new-semester" placeholder="Enter semester name">
+        <button onclick="addSemesterToClass()">Add Semester</button>
+    </div>
+</div>
+
+        <!-- Manage Students Section -->
+        <div id="manage-students" class="manage-students" style="display: none;">
+            <h2>Create Student</h2>
+            <form id="student-form">
+                <input type="text" id="student-first-name" placeholder="First Name" required>
+                <input type="text" id="student-last-name" placeholder="Last Name" required>
+                <input type="number" id="student-roll-no" placeholder="Roll No" required>
+                <input type="email" id="student-email" placeholder="Email Address" required>
+                <input type="tel" id="student-phone" placeholder="Phone Number" required>
+                <select id="student-class" required>
+                    <option value="">Select Class</option>
+                </select>
+                <button type="submit">Save Student</button>
+            </form>
+            <div class="student-list" id="student-list">
+                <h2>Saved Students</h2>
+            </div>
+        </div>
+
+        <!-- Attendance Section -->
+        <div id="attendance" class="attendance" style="display: none;">
+            <h2>Mark Attendance</h2>
+            <div class="attendance-controls">
+                <label for="attendance-class">Select Class:</label>
+                <select id="attendance-class" onchange="fetchStudentsForAttendance()">
+                    <option value="">Select Class</option>
+                </select>
+                <label for="attendance-date">Select Date:</label>
+                <input type="date" id="attendance-date" required>
+            </div>
+            <div class="attendance-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Roll No</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendance-student-list">
+                    </tbody>
+                </table>
+            </div>
+            <button onclick="saveAttendance()">Save Attendance</button>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settings" class="settings" style="display: none;">
+            <h2>Settings</h2>
+            <p>Coming soon...</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
