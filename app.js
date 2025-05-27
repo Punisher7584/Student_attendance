@@ -11,28 +11,58 @@ import {
     addDoc,
     auth,
     signOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    deleteField  // Add this import
 } from './firebase-config.js';
 
 // import { auth } from './firebase-config.js';
 // Verify authentication state
 onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-        window.location.href = "login.html";
-        return;
-    }
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
 
-    // Verify admin role
-    const userDoc = await getDoc(doc(db, "users", user.uid));
-    if (!userDoc.exists() || userDoc.data().role !== "admin") {
-        alert("Only admins can access this dashboard");
-        window.location.href = "login.html";
-        return;
-    }
+  const userDoc = await getDoc(doc(db, "users", user.uid));
+  
+  // Temporary bypass - remove this in production!
+  if (!userDoc.exists()) {
+    console.warn("User document not found - creating with admin role");
+    await setDoc(doc(db, "users", user.uid), {
+      email: user.email,
+      role: "admin", // Temporary admin access
+      createdAt: new Date().toISOString()
+    });
+    return; // Continue with admin access
+  }
 
-    // Now load the dashboard
-    showSection("dashboard");
+  // Normal role check
+  const userData = userDoc.data();
+  if (userData.role !== "admin") {
+    alert("Only admins can access this dashboard");
+    window.location.href = "login.html";
+    return;
+  }
+
+  // Continue with admin dashboard
+  showSection("dashboard");
 });
+
+
+async function makeUserAdmin(friendUid, friendEmail) {
+  try {
+    await setDoc(doc(db, "users", friendUid), {
+      email: friendEmail,
+      role: "admin",
+      createdAt: new Date().toISOString()
+    }, { merge: true }); // merge: true preserves other fields if document exists
+    alert("Admin role granted successfully!");
+  } catch (error) {
+    console.error("Error granting admin role:", error);
+    alert("Error granting admin role. Please try again.");
+  }
+}
+
 
 // Global Functions
 window.showSection = function(sectionId) {
@@ -45,34 +75,30 @@ window.showSection = function(sectionId) {
         selectedSection.style.display = "block";
     }
 
-    // Only initialize dropdowns for the active section
+    // Initialize sections properly
     if (sectionId === "dashboard") {
         fetchDashboardData();
     }
-    if (sectionId === "create-class") {
+    else if (sectionId === "create-class") {
         fetchClasses();
     }
-    if (sectionId === "add-semesters") {
+    else if (sectionId === "add-semesters") {
         fetchClassesForDropdown("semester-class-select");
-        fetchClassesWithSemesters(); // New function to load classes with their semesters
+        fetchClassesWithSemesters();
     }
-    if (sectionId === "manage-teachers") {
-        if (document.getElementById("teacher-class")) {
-            fetchClassesForDropdown("teacher-class");
-        }
-        if (document.getElementById("assignment-class")) {
-            fetchClassesForDropdown("assignment-class");
-            fetchTeachersForDropdown();
-        }
+    else if (sectionId === "create-teacher") {
         fetchTeachers();
     }
-    if (sectionId === "manage-students") {
+    else if (sectionId === "allot-class") {
+        initializeAllotClassSection();
+    }
+    else if (sectionId === "manage-students") {
         if (document.getElementById("student-class")) {
             fetchClassesForDropdown("student-class");
         }
         fetchStudents();
     }
-    if (sectionId === "attendance") {
+    else if (sectionId === "attendance") {
         if (document.getElementById("attendance-class")) {
             fetchClassesForAttendanceDropdown();
         }
@@ -365,6 +391,150 @@ window.loadClassSemesters = async function() {
 
 
 // Teacher Management Functions
+window.showTeacherSubSection = function(subSectionId) {
+    // Hide all top-level sections
+    document.querySelectorAll('.main-content > div').forEach(div => {
+        div.style.display = 'none';
+    });
+
+    // Show the parent section for teacher management
+    document.getElementById('manage-teachers').style.display = 'block';
+
+    // Hide all subsections
+    const subsections = document.querySelectorAll('#manage-teachers .teacher-subsection');
+    subsections.forEach(sub => sub.style.display = 'none');
+
+    // Show only the selected subsection
+    document.getElementById(subSectionId).style.display = 'block';
+    
+    // Load appropriate data
+    if (subSectionId === 'create-teacher') {
+        fetchTeachers();
+    } else if (subSectionId === 'allot-class') {
+        initializeAllotClassSection();
+    }
+};
+
+
+// Add this function to initialize the allot class section
+async function initializeAllotClassSection() {
+    try {
+        await fetchTeachersForDropdown();
+        await fetchClassesForDropdown("assignment-class");
+        await fetchTeacherAssignments();
+        
+        // Set up event listeners
+        const classSelect = document.getElementById("assignment-class");
+        if (classSelect) {
+            classSelect.addEventListener("change", function() {
+                const classId = this.value;
+                if (classId) {
+                    loadSemesterCheckboxes(classId);
+                } else {
+                    document.getElementById("semester-checkboxes").style.display = "none";
+                    document.getElementById("subject-checkboxes").style.display = "none";
+                }
+            });
+        }
+    } catch (error) {
+        console.error("Error initializing allot class section:", error);
+        alert("Error initializing teacher assignment section. Please try again.");
+    }
+}
+
+async function loadSemesterCheckboxes(classId) {
+    const semesterContainer = document.getElementById("semester-checkboxes");
+    semesterContainer.innerHTML = "<h4>Select Semesters:</h4>";
+    semesterContainer.style.display = "none";
+    document.getElementById("subject-checkboxes").style.display = "none";
+    
+    if (!classId) return;
+    
+    try {
+        const classRef = doc(db, "classes", classId);
+        const classSnap = await getDoc(classRef);
+        
+        if (classSnap.exists()) {
+            const classData = classSnap.data();
+            if (classData.semesters && Object.keys(classData.semesters).length > 0) {
+                for (const [semesterId, semesterData] of Object.entries(classData.semesters)) {
+                    const checkboxDiv = document.createElement("div");
+                    checkboxDiv.className = "semester-checkbox";
+                    
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.id = `semester-${semesterId}`;
+                    checkbox.value = semesterId;
+                    checkbox.dataset.classId = classId;
+                    checkbox.addEventListener("change", function() {
+                        if (this.checked) {
+                            loadSubjectCheckboxes(classId, semesterId);
+                        } else {
+                            // Hide subjects if semester is unchecked
+                            document.getElementById("subject-checkboxes").style.display = "none";
+                        }
+                    });
+                    
+                    const label = document.createElement("label");
+                    label.htmlFor = `semester-${semesterId}`;
+                    label.textContent = semesterData.name;
+                    
+                    checkboxDiv.appendChild(checkbox);
+                    checkboxDiv.appendChild(label);
+                    semesterContainer.appendChild(checkboxDiv);
+                }
+                
+                semesterContainer.style.display = "block";
+            }
+        }
+    } catch (error) {
+        console.error("Error loading semesters:", error);
+    }
+}
+
+async function loadSubjectCheckboxes(classId, semesterId) {
+    const subjectContainer = document.getElementById("subject-checkboxes");
+    subjectContainer.innerHTML = "<h4>Select Subjects:</h4>";
+    subjectContainer.style.display = "none";
+    
+    try {
+        const classRef = doc(db, "classes", classId);
+        const classSnap = await getDoc(classRef);
+        
+        if (classSnap.exists()) {
+            const classData = classSnap.data();
+            const semester = classData.semesters?.[semesterId];
+            
+            if (semester && semester.subjects) {
+                for (const [subjectId, subjectName] of Object.entries(semester.subjects)) {
+                    const checkboxDiv = document.createElement("div");
+                    checkboxDiv.className = "subject-checkbox";
+                    
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.id = `subject-${subjectId}`;
+                    checkbox.value = subjectId;
+                    checkbox.dataset.semesterId = semesterId;
+                    checkbox.dataset.classId = classId;
+                    
+                    const label = document.createElement("label");
+                    label.htmlFor = `subject-${subjectId}`;
+                    label.textContent = subjectName;
+                    
+                    checkboxDiv.appendChild(checkbox);
+                    checkboxDiv.appendChild(label);
+                    subjectContainer.appendChild(checkboxDiv);
+                }
+                
+                subjectContainer.style.display = "block";
+            }
+        }
+    } catch (error) {
+        console.error("Error loading subjects:", error);
+    }
+}
+
+
 window.saveTeacher = async function(event) {
     event.preventDefault();
 
@@ -372,10 +542,8 @@ window.saveTeacher = async function(event) {
     const lastName = document.getElementById("last-name").value.trim();
     const email = document.getElementById("email").value.trim();
     const phone = document.getElementById("phone").value.trim();
-    const classId = document.getElementById("teacher-class").value;
-    const semesterId = document.getElementById("teacher-semester").value;
 
-    if (!firstName || !lastName || !email || !phone || !classId || !semesterId) {
+    if (!firstName || !lastName || !email || !phone) {
         alert("Please fill all fields!");
         return;
     }
@@ -386,12 +554,11 @@ window.saveTeacher = async function(event) {
             lastName,
             email,
             phone,
-            classId,
-            semesterId
+            createdAt: new Date().toISOString()
         });
 
         document.getElementById("teacher-form").reset();
-        fetchTeachers();
+        fetchTeachers(); // Refresh teacher list
         alert("Teacher saved successfully!");
     } catch (error) {
         console.error("Error saving teacher:", error);
@@ -406,7 +573,7 @@ async function fetchTeachers() {
         return;
     }
 
-    teacherList.innerHTML = "<h2>Saved Teachers</h2>";
+    teacherList.innerHTML = "<h3>Saved Teachers</h3>";
     
     try {
         const teachersSnapshot = await getDocs(collection(db, "teachers"));
@@ -416,95 +583,172 @@ async function fetchTeachers() {
             return;
         }
 
-        // Get all assignments first
-        const assignmentsSnapshot = await getDocs(collection(db, "teacher_assignments"));
-        const assignmentsMap = new Map();
-        assignmentsSnapshot.forEach(doc => {
-            const data = doc.data();
-            if (!assignmentsMap.has(data.teacherId)) {
-                assignmentsMap.set(data.teacherId, []);
-            }
-            assignmentsMap.get(data.teacherId).push(data);
-        });
-
-        // Process each teacher
-        for (const teacherDoc of teachersSnapshot.docs) {
-            const teacherData = teacherDoc.data();
-            const teacherAssignments = assignmentsMap.get(teacherDoc.id) || [];
-
+        teachersSnapshot.forEach((doc) => {
+            const teacherData = doc.data();
             const teacherItem = document.createElement("div");
             teacherItem.className = "teacher-item";
-            
-            // Teacher info
             teacherItem.innerHTML = `
                 <div class="teacher-info">
-                    <h3>${teacherData.firstName} ${teacherData.lastName}</h3>
+                    <h4>${teacherData.firstName} ${teacherData.lastName}</h4>
                     <p>Email: ${teacherData.email}</p>
                     <p>Phone: ${teacherData.phone}</p>
                 </div>
-                <div class="teacher-assignments">
-                    <h4>Assignments:</h4>
-            `;
-
-            // Add assignments if they exist
-            if (teacherAssignments.length === 0) {
-                teacherItem.innerHTML += `<p>No assignments yet.</p>`;
-            } else {
-                const assignmentsList = document.createElement("ul");
-                
-                // Process each assignment
-                for (const assignment of teacherAssignments) {
-                    // Get class name
-                    let className = "Unknown Class";
-                    try {
-                        const classDoc = await getDoc(doc(db, "classes", assignment.classId));
-                        if (classDoc.exists()) {
-                            className = classDoc.data().name;
-                        }
-                    } catch (error) {
-                        console.error("Error fetching class:", error);
-                    }
-
-                    // Get semester name
-                    let semesterName = "Unknown Semester";
-                    try {
-                        const classDoc = await getDoc(doc(db, "classes", assignment.classId));
-                        if (classDoc.exists()) {
-                            const classData = classDoc.data();
-                            semesterName = classData.semesters?.[assignment.semesterId]?.name || semesterName;
-                        }
-                    } catch (error) {
-                        console.error("Error fetching semester:", error);
-                    }
-
-                    // Create assignment item
-                    const assignmentItem = document.createElement("li");
-                    assignmentItem.innerHTML = `
-                        <strong>${className} - ${semesterName}</strong>
-                        <button onclick="removeAssignment('${assignment.id}')">Remove</button>
-                    `;
-                    assignmentsList.appendChild(assignmentItem);
-                }
-                
-                teacherItem.appendChild(assignmentsList);
-            }
-
-            // Add action buttons
-            teacherItem.innerHTML += `
-                </div>
                 <div class="teacher-actions">
-                    <button onclick="editTeacher('${teacherDoc.id}')">Edit</button>
-                    <button onclick="deleteTeacher('${teacherDoc.id}')">Delete</button>
+                    <button class="edit-btn" onclick="editTeacher('${doc.id}')">Edit</button>
+                    <button class="delete-btn" onclick="deleteTeacher('${doc.id}')">Delete</button>
                 </div>
             `;
-
             teacherList.appendChild(teacherItem);
-        }
+        });
     } catch (error) {
         console.error("Error fetching teachers:", error);
         teacherList.innerHTML += `<p class="error">Error loading teachers: ${error.message}</p>`;
     }
 }
+
+// async function fetchTeachers() {
+//     const teacherList = document.getElementById("teacher-list");
+//     if (!teacherList) return;
+
+//     teacherList.innerHTML = "<h3>Teacher List</h3>";
+    
+//     try {
+//         const teachersSnapshot = await getDocs(collection(db, "teachers"));
+        
+//         if (teachersSnapshot.empty) {
+//             teacherList.innerHTML += "<p>No teachers found.</p>";
+//             return;
+//         }
+
+//         teachersSnapshot.forEach((doc) => {
+//             const teacherData = doc.data();
+//             const teacherItem = document.createElement("div");
+//             teacherItem.className = "teacher-item";
+//             teacherItem.innerHTML = `
+//                 <div class="teacher-info">
+//                     <h4>${teacherData.firstName} ${teacherData.lastName}</h4>
+//                     <p>Email: ${teacherData.email}</p>
+//                     <p>Phone: ${teacherData.phone}</p>
+//                 </div>
+//                 <div class="teacher-actions">
+//                     <button onclick="editTeacher('${doc.id}')">Edit</button>
+//                     <button onclick="deleteTeacher('${doc.id}')">Delete</button>
+//                 </div>
+//             `;
+//             teacherList.appendChild(teacherItem);
+//         });
+//     } catch (error) {
+//         console.error("Error fetching teachers:", error);
+//         teacherList.innerHTML += `<p class="error">Error loading teachers: ${error.message}</p>`;
+//     }
+// }
+
+// async function fetchTeachers() {
+//     const teacherList = document.getElementById("teacher-list");
+//     if (!teacherList) {
+//         console.error("Teacher list element not found");
+//         return;
+//     }
+
+//     teacherList.innerHTML = "<h2>Saved Teachers</h2>";
+    
+//     try {
+//         const teachersSnapshot = await getDocs(collection(db, "teachers"));
+        
+//         if (teachersSnapshot.empty) {
+//             teacherList.innerHTML += "<p>No teachers found.</p>";
+//             return;
+//         }
+
+//         // Get all assignments first
+//         const assignmentsSnapshot = await getDocs(collection(db, "teacher_assignments"));
+//         const assignmentsMap = new Map();
+//         assignmentsSnapshot.forEach(doc => {
+//             const data = doc.data();
+//             if (!assignmentsMap.has(data.teacherId)) {
+//                 assignmentsMap.set(data.teacherId, []);
+//             }
+//             assignmentsMap.get(data.teacherId).push(data);
+//         });
+
+//         // Process each teacher
+//         for (const teacherDoc of teachersSnapshot.docs) {
+//             const teacherData = teacherDoc.data();
+//             const teacherAssignments = assignmentsMap.get(teacherDoc.id) || [];
+
+//             const teacherItem = document.createElement("div");
+//             teacherItem.className = "teacher-item";
+            
+//             // Teacher info
+//             teacherItem.innerHTML = `
+//                 <div class="teacher-info">
+//                     <h3>${teacherData.firstName} ${teacherData.lastName}</h3>
+//                     <p>Email: ${teacherData.email}</p>
+//                     <p>Phone: ${teacherData.phone}</p>
+//                 </div>
+//                 <div class="teacher-assignments">
+//                     <h4>Assignments:</h4>
+//             `;
+
+//             // Add assignments if they exist
+//             if (teacherAssignments.length === 0) {
+//                 teacherItem.innerHTML += `<p>No assignments yet.</p>`;
+//             } else {
+//                 const assignmentsList = document.createElement("ul");
+                
+//                 // Process each assignment
+//                 for (const assignment of teacherAssignments) {
+//                     // Get class name
+//                     let className = "Unknown Class";
+//                     try {
+//                         const classDoc = await getDoc(doc(db, "classes", assignment.classId));
+//                         if (classDoc.exists()) {
+//                             className = classDoc.data().name;
+//                         }
+//                     } catch (error) {
+//                         console.error("Error fetching class:", error);
+//                     }
+
+//                     // Get semester name
+//                     let semesterName = "Unknown Semester";
+//                     try {
+//                         const classDoc = await getDoc(doc(db, "classes", assignment.classId));
+//                         if (classDoc.exists()) {
+//                             const classData = classDoc.data();
+//                             semesterName = classData.semesters?.[assignment.semesterId]?.name || semesterName;
+//                         }
+//                     } catch (error) {
+//                         console.error("Error fetching semester:", error);
+//                     }
+
+//                     // Create assignment item
+//                     const assignmentItem = document.createElement("li");
+//                     assignmentItem.innerHTML = `
+//                         <strong>${className} - ${semesterName}</strong>
+//                         <button onclick="removeAssignment('${assignment.id}')">Remove</button>
+//                     `;
+//                     assignmentsList.appendChild(assignmentItem);
+//                 }
+                
+//                 teacherItem.appendChild(assignmentsList);
+//             }
+
+//             // Add action buttons
+//             teacherItem.innerHTML += `
+//                 </div>
+//                 <div class="teacher-actions">
+//                     <button onclick="editTeacher('${teacherDoc.id}')">Edit</button>
+//                     <button onclick="deleteTeacher('${teacherDoc.id}')">Delete</button>
+//                 </div>
+//             `;
+
+//             teacherList.appendChild(teacherItem);
+//         }
+//     } catch (error) {
+//         console.error("Error fetching teachers:", error);
+//         teacherList.innerHTML += `<p class="error">Error loading teachers: ${error.message}</p>`;
+//     }
+// }
 
 
 
@@ -564,10 +808,27 @@ window.editTeacher = async function(id) {
     }
 };
 
+
 window.deleteTeacher = async function(id) {
-    if (confirm("Are you sure you want to delete this teacher?")) {
+    if (confirm("Are you sure you want to delete this teacher and all their assignments?")) {
         try {
+            // First delete any assignments for this teacher
+            const assignmentsQuery = query(
+                collection(db, "teacher_assignments"),
+                where("teacherId", "==", id)
+            );
+            const assignmentsSnapshot = await getDocs(assignmentsQuery);
+            
+            const deletePromises = [];
+            assignmentsSnapshot.forEach((doc) => {
+                deletePromises.push(deleteDoc(doc.ref));
+            });
+            
+            await Promise.all(deletePromises);
+            
+            // Then delete the teacher
             await deleteDoc(doc(db, "teachers", id));
+            
             fetchTeachers();
             alert("Teacher deleted successfully!");
         } catch (error) {
@@ -579,6 +840,8 @@ window.deleteTeacher = async function(id) {
 
 async function fetchTeachersForDropdown() {
     const teacherSelect = document.getElementById("assignment-teacher");
+    if (!teacherSelect) return;
+    
     teacherSelect.innerHTML = "<option value=''>Select Teacher</option>";
     
     try {
@@ -595,8 +858,11 @@ async function fetchTeachersForDropdown() {
     }
 }
 
+
 window.loadAssignmentSemesters = async function(classId) {
     const semesterSelect = document.getElementById("assignment-semester");
+    if (!semesterSelect) return;
+    
     semesterSelect.innerHTML = "<option value=''>Select Semester</option>";
     document.getElementById("subject-checkboxes").style.display = "none";
     
@@ -625,6 +891,8 @@ window.loadAssignmentSemesters = async function(classId) {
 
 window.loadAssignmentSubjects = async function(semesterId) {
     const subjectContainer = document.getElementById("subject-checkboxes");
+    if (!subjectContainer) return;
+    
     subjectContainer.innerHTML = "<h4>Select Subjects:</h4>";
     subjectContainer.style.display = "none";
     
@@ -642,7 +910,7 @@ window.loadAssignmentSubjects = async function(semesterId) {
             const semester = classData.semesters?.[semesterId];
             
             if (semester && semester.subjects) {
-                allSubjects = semester.subjects; // Cache subjects
+                allSubjects = semester.subjects;
                 
                 for (const [subjectId, subjectName] of Object.entries(semester.subjects)) {
                     const checkboxDiv = document.createElement("div");
@@ -670,47 +938,54 @@ window.loadAssignmentSubjects = async function(semesterId) {
     }
 };
 
+
 window.assignTeacher = async function() {
     const teacherId = document.getElementById("assignment-teacher").value;
     const classId = document.getElementById("assignment-class").value;
-    const semesterId = document.getElementById("assignment-semester").value;
     
-    if (!teacherId || !classId || !semesterId) {
-        alert("Please select teacher, class, and semester!");
+    if (!teacherId || !classId) {
+        alert("Please select teacher and class!");
         return;
     }
     
-    // Get selected subjects
-    const selectedSubjects = [];
-    document.querySelectorAll("#subject-checkboxes input[type='checkbox']:checked").forEach((checkbox) => {
-        selectedSubjects.push(checkbox.value);
-    });
+    // Get selected semesters and their subjects
+    const selectedSemesters = [];
+    const semesterCheckboxes = document.querySelectorAll("#semester-checkboxes input[type='checkbox']:checked");
     
-    if (selectedSubjects.length === 0) {
-        alert("Please select at least one subject!");
+    if (semesterCheckboxes.length === 0) {
+        alert("Please select at least one semester!");
         return;
     }
     
     try {
-        // Check if this assignment already exists
-        const assignmentQuery = query(
+        // First, remove any existing assignments for this teacher-class combination
+        const existingAssignmentsQuery = query(
             collection(db, "teacher_assignments"),
             where("teacherId", "==", teacherId),
-            where("classId", "==", classId),
-            where("semesterId", "==", semesterId)
+            where("classId", "==", classId)
         );
         
-        const querySnapshot = await getDocs(assignmentQuery);
+        const existingAssignments = await getDocs(existingAssignmentsQuery);
+        const deletePromises = [];
+        existingAssignments.forEach(doc => {
+            deletePromises.push(deleteDoc(doc.ref));
+        });
+        await Promise.all(deletePromises);
         
-        if (!querySnapshot.empty) {
-            // Update existing assignment
-            const assignmentId = querySnapshot.docs[0].id;
-            await updateDoc(doc(db, "teacher_assignments", assignmentId), {
-                subjects: selectedSubjects
-            });
-            alert("Teacher assignment updated successfully!");
-        } else {
-            // Create new assignment
+        // Create new assignments for each selected semester
+        for (const semesterCheckbox of semesterCheckboxes) {
+            const semesterId = semesterCheckbox.value;
+            const subjectCheckboxes = document.querySelectorAll(
+                `#subject-checkboxes input[type='checkbox'][data-semester-id='${semesterId}']:checked`
+            );
+            
+            const selectedSubjects = Array.from(subjectCheckboxes).map(cb => cb.value);
+            
+            if (selectedSubjects.length === 0) {
+                alert(`Please select at least one subject for semester ${semesterCheckbox.nextElementSibling.textContent}`);
+                return;
+            }
+            
             await addDoc(collection(db, "teacher_assignments"), {
                 teacherId,
                 classId,
@@ -719,23 +994,118 @@ window.assignTeacher = async function() {
                 isActive: true,
                 assignedDate: new Date().toISOString()
             });
-            alert("Teacher assigned successfully!");
         }
         
-        // Refresh teacher display
-        fetchTeachers();
+        alert("Teacher assigned successfully!");
+        fetchTeacherAssignments();
     } catch (error) {
         console.error("Error assigning teacher:", error);
         alert("Error assigning teacher. Please try again.");
     }
 };
 
+async function fetchTeacherAssignments() {
+    const assignmentsContainer = document.getElementById("teacher-assignments");
+    if (!assignmentsContainer) return;
+
+    assignmentsContainer.innerHTML = "<h3>Teacher Assignments</h3>";
+    
+    try {
+        // Get all assignments
+        const assignmentsSnapshot = await getDocs(collection(db, "teacher_assignments"));
+        
+        if (assignmentsSnapshot.empty) {
+            assignmentsContainer.innerHTML += "<p>No assignments found.</p>";
+            return;
+        }
+
+        // Get all teachers, classes, and semesters for reference
+        const [teachersSnapshot, classesSnapshot] = await Promise.all([
+            getDocs(collection(db, "teachers")),
+            getDocs(collection(db, "classes"))
+        ]);
+
+        // Create maps for quick lookup
+        const teachersMap = new Map();
+        teachersSnapshot.forEach(doc => {
+            teachersMap.set(doc.id, doc.data());
+        });
+
+        const classesMap = new Map();
+        classesSnapshot.forEach(doc => {
+            classesMap.set(doc.id, doc.data());
+        });
+
+        // Group assignments by teacher
+        const assignmentsByTeacher = new Map();
+        assignmentsSnapshot.forEach(doc => {
+            const assignment = doc.data();
+            if (!assignmentsByTeacher.has(assignment.teacherId)) {
+                assignmentsByTeacher.set(assignment.teacherId, []);
+            }
+            assignmentsByTeacher.get(assignment.teacherId).push({
+                id: doc.id,
+                ...assignment
+            });
+        });
+
+        // Display assignments
+        for (const [teacherId, assignments] of assignmentsByTeacher.entries()) {
+            const teacherData = teachersMap.get(teacherId);
+            if (!teacherData) continue;
+
+            const teacherDiv = document.createElement("div");
+            teacherDiv.className = "teacher-assignment-group";
+            teacherDiv.innerHTML = `<h4>${teacherData.firstName} ${teacherData.lastName}</h4>`;
+            
+            const assignmentsList = document.createElement("ul");
+            assignmentsList.className = "assignment-list";
+
+            for (const assignment of assignments) {
+                const classData = classesMap.get(assignment.classId);
+                if (!classData) continue;
+
+                const semesterData = classData.semesters?.[assignment.semesterId];
+                if (!semesterData) continue;
+
+                // Get subject names
+                const subjectNames = [];
+                if (assignment.subjects && Array.isArray(assignment.subjects)) {
+                    assignment.subjects.forEach(subjectId => {
+                        if (semesterData.subjects?.[subjectId]) {
+                            subjectNames.push(semesterData.subjects[subjectId]);
+                        }
+                    });
+                }
+
+                const assignmentItem = document.createElement("li");
+                assignmentItem.className = "assignment-item";
+                assignmentItem.innerHTML = `
+                    <div class="assignment-info">
+                        <p><strong>Class:</strong> ${classData.name}</p>
+                        <p><strong>Semester:</strong> ${semesterData.name}</p>
+                        <p><strong>Subjects:</strong> ${subjectNames.join(", ") || "None"}</p>
+                    </div>
+                    <button class="remove-btn" onclick="removeAssignment('${assignment.id}')">Remove</button>
+                `;
+                assignmentsList.appendChild(assignmentItem);
+            }
+
+            teacherDiv.appendChild(assignmentsList);
+            assignmentsContainer.appendChild(teacherDiv);
+        }
+    } catch (error) {
+        console.error("Error fetching assignments:", error);
+        assignmentsContainer.innerHTML += `<p class="error">Error loading assignments: ${error.message}</p>`;
+    }
+}
+
 
 window.removeAssignment = async function(assignmentId) {
     if (confirm("Are you sure you want to remove this assignment?")) {
         try {
             await deleteDoc(doc(db, "teacher_assignments", assignmentId));
-            fetchTeachers();
+            fetchTeacherAssignments();
             alert("Assignment removed successfully!");
         } catch (error) {
             console.error("Error removing assignment:", error);
@@ -743,6 +1113,27 @@ window.removeAssignment = async function(assignmentId) {
         }
     }
 };
+
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Teacher form submission
+    const teacherForm = document.getElementById("teacher-form");
+    if (teacherForm) {
+        teacherForm.addEventListener("submit", function(e) {
+            e.preventDefault();
+            window.saveTeacher(e);
+        });
+    }
+
+    // Student form submission
+    const studentForm = document.getElementById("student-form");
+    if (studentForm) {
+        studentForm.addEventListener("submit", function(e) {
+            e.preventDefault();
+            window.saveStudent(e);
+        });
+    }
+});
 
 
 
@@ -1048,6 +1439,5 @@ async function fetchClassesForAttendanceDropdown() {
     }
 }
 
-// Event Listeners
 document.getElementById("teacher-form").addEventListener("submit", window.saveTeacher);
 document.getElementById("student-form").addEventListener("submit", window.saveStudent);

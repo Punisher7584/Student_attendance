@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { 
-    getFirestore, collection, getDocs, doc, getDoc, deleteDoc, updateDoc, query, where, addDoc 
+    getFirestore, collection, getDocs, doc, getDoc, deleteDoc, updateDoc, query, where, addDoc, deleteField 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { 
     getDatabase, ref, get, set, push, remove, child, update // Added 'update' here
@@ -25,13 +25,10 @@ const rtdb = getDatabase(app); // Realtime Database instance
 const auth = getAuth(app);
 
 export { 
-    db, // Firestore
-    rtdb, // Realtime Database
+    db,
+    rtdb,
     auth,
-    // Firestore functions
-    collection, getDocs, doc, getDoc, deleteDoc, updateDoc, query, where, addDoc,
-    // Realtime DB functions
-    ref, get, set, push, remove, child, update, // Added 'update' here
-    // Auth functions
+    collection, getDocs, doc, getDoc, deleteDoc, updateDoc, query, where, addDoc, deleteField,
+    ref, get, set, push, remove, child, update,
     signOut, onAuthStateChanged
 };
