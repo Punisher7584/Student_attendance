@@ -4,6 +4,7 @@ import {
     getDocs, 
     doc, 
     getDoc, 
+    setDoc, // Add this import
     deleteDoc,
     updateDoc,
     query,
@@ -12,56 +13,47 @@ import {
     auth,
     signOut,
     onAuthStateChanged,
-    deleteField  // Add this import
+    deleteField
 } from './firebase-config.js';
 
-// import { auth } from './firebase-config.js';
-// Verify authentication state
+// Modified auth state handler
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "login.html";
     return;
   }
 
-  const userDoc = await getDoc(doc(db, "users", user.uid));
-  
-  // Temporary bypass - remove this in production!
-  if (!userDoc.exists()) {
-    console.warn("User document not found - creating with admin role");
-    await setDoc(doc(db, "users", user.uid), {
-      email: user.email,
-      role: "admin", // Temporary admin access
-      createdAt: new Date().toISOString()
-    });
-    return; // Continue with admin access
-  }
-
-  // Normal role check
-  const userData = userDoc.data();
-  if (userData.role !== "admin") {
-    alert("Only admins can access this dashboard");
-    window.location.href = "login.html";
-    return;
-  }
-
-  // Continue with admin dashboard
+  // TEMPORARY BYPASS - REMOVE IN PRODUCTION
+  console.log("Temporary admin bypass - remove in production!");
   showSection("dashboard");
-});
-
-
-async function makeUserAdmin(friendUid, friendEmail) {
+  return;
+  
   try {
-    await setDoc(doc(db, "users", friendUid), {
-      email: friendEmail,
-      role: "admin",
-      createdAt: new Date().toISOString()
-    }, { merge: true }); // merge: true preserves other fields if document exists
-    alert("Admin role granted successfully!");
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    
+    if (!userDoc.exists()) {
+      console.error("User document not found");
+      alert("Access denied - no user record");
+      await signOut(auth);
+      window.location.href = "login.html";
+      return;
+    }
+
+    const userData = userDoc.data();
+    if (userData.role !== "admin") {
+      alert("Only admins can access this dashboard");
+      await signOut(auth);
+      window.location.href = "login.html";
+      return;
+    }
+
+    showSection("dashboard");
   } catch (error) {
-    console.error("Error granting admin role:", error);
-    alert("Error granting admin role. Please try again.");
+    console.error("Auth error:", error);
+    alert("Error verifying access");
+    window.location.href = "login.html";
   }
-}
+});
 
 
 // Global Functions
@@ -102,6 +94,41 @@ window.showSection = function(sectionId) {
         if (document.getElementById("attendance-class")) {
             fetchClassesForAttendanceDropdown();
         }
+    }
+};
+
+// Add this function to properly handle user roles
+async function setUserRole(uid, email, role = "user") {
+    try {
+        await setDoc(doc(db, "users", uid), {
+            email,
+            role,
+            lastUpdated: new Date().toISOString()
+        }, { merge: true });
+    } catch (error) {
+        console.error("Error setting user role:", error);
+        throw error;
+    }
+}
+
+// Add this to your admin dashboard
+window.grantAdminRole = async function() {
+    const email = prompt("Enter user email to make admin:");
+    if (!email) return;
+    
+    try {
+        // In a real app, you would look up the user by email
+        const user = auth.currentUser;
+        await setDoc(doc(db, "users", user.uid), {
+            email: user.email,
+            role: "admin",
+            grantedBy: auth.currentUser.uid,
+            grantedAt: new Date().toISOString()
+        }, { merge: true });
+        alert("Admin role granted successfully!");
+    } catch (error) {
+        console.error("Error granting admin role:", error);
+        alert("Error granting admin role: " + error.message);
     }
 };
 

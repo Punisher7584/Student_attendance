@@ -1,7 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { 
-    getFirestore, collection, getDocs, doc, getDoc, deleteDoc, updateDoc, query, where, addDoc, deleteField 
+    getFirestore, collection, getDocs, doc, getDoc, deleteDoc, updateDoc, query, where, addDoc, deleteField, setDoc 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
 import { 
     getDatabase, ref, get, set, push, remove, child, update // Added 'update' here
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -28,7 +29,7 @@ export {
     db,
     rtdb,
     auth,
-    collection, getDocs, doc, getDoc, deleteDoc, updateDoc, query, where, addDoc, deleteField,
+    collection, getDocs, doc, getDoc, deleteDoc, updateDoc, query, where, addDoc, deleteField, setDoc,
     ref, get, set, push, remove, child, update,
     signOut, onAuthStateChanged
 };
