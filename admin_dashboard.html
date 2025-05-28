@@ -19,15 +19,20 @@
                     <li><a href="#add-semesters" onclick="showSection('add-semesters')">Add Semesters</a></li>
                 </ul>
             </li>
-            <!-- In the sidebar section -->
             <li class="has-submenu" aria-haspopup="true" aria-expanded="false">
                 <a href="#" onclick="toggleSubmenu(this.parentElement, event)">Manage Teachers</a>
                 <ul class="submenu">
-                    <li><a href="#create-teacher" onclick="showTeacherSubSection('create-teacher')">Create Teacher</a></li>
-                    <li><a href="#allot-class" onclick="showTeacherSubSection('allot-class')">Allot Class</a></li>
+                    <li><a href="#create-teacher" onclick="showSection('create-teacher')">Create Teacher</a></li>
+                    <li><a href="#allot-class" onclick="showSection('allot-class')">Allot Class</a></li>
                 </ul>
             </li>
             <li><a href="#manage-students" onclick="showSection('manage-students')">Manage Students</a></li>
+            <li class="has-submenu" onclick="toggleSubmenu(this, event)">
+                <a href="#"><i class="fas fa-book"></i> Manage Subjects</a>
+                <ul class="submenu">
+                    <li><a href="#" onclick="showSection('manage-subjects')">Create Subjects</a></li>
+                </ul>
+            </li>
             <li><a href="#attendance" onclick="showSection('attendance')">Attendance</a></li>
             <li><a href="#">Settings</a></li>
         </ul>
@@ -84,14 +89,16 @@
         <div id="add-semesters" class="manage-classes" style="display: none;">
             <div class="class-management-container">
                 <div class="create-semester-section">
-                    <h2>Add Semester to Class</h2>
-                    <select id="semester-class-select" onchange="loadClassSemesters()">
-                        <option value="">Select Class</option>
-                    </select>
-                    <input type="text" id="semester-name" placeholder="Semester Name">
-                    <button onclick="addSemester()">Add Semester</button>
-                </div>
+                <h2>Add Semester to Class</h2>
+                <select id="semester-class-select" onchange="loadClassSemesters()">
+                    <option value="">Select Class</option>
+                </select>
+                <input type="text" id="semester-name" placeholder="Semester Name">
+                <input type="date" id="semester-start-date" placeholder="Start Date">
+                <input type="date" id="semester-end-date" placeholder="End Date">
+                <button onclick="addSemester()">Add Semester</button>
             </div>
+        </div>
             
             <div class="class-list-container">
                 <h2>Saved Classes & Semesters</h2>
@@ -101,71 +108,65 @@
             </div>
         </div>
 
-        <!-- Manage Teachers Section -->
-        <!-- Manage Teachers Section -->
-        <div id="manage-teachers" class="manage-teachers" style="display: none;">
-    <!-- Main menu item for Teachers -->
-    <h2>Manage Teachers</h2>
+        <!-- Create Teacher Section -->
+        <div id="create-teacher" class="manage-teachers" style="display: none;">
+            <h3>Create Teacher</h3>
+            <form id="teacher-form">
+                <div class="form-group">
+                    <input type="text" id="first-name" placeholder="First Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="last-name" placeholder="Last Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="email" placeholder="Email Address" required>
+                </div>
+                <div class="form-group">
+                    <input type="tel" id="phone" placeholder="Phone Number" required>
+                </div>
+                <button type="submit" class="save-btn">Save Teacher</button>
+            </form>
     
-    <!-- Create Teacher Subsection -->
-    <div id="create-teacher" class="teacher-subsection">
-        <h3>Create Teacher</h3>
-        <form id="teacher-form">
-            <div class="form-group">
-                <input type="text" id="first-name" placeholder="First Name" required>
+            <div class="teacher-list" id="teacher-list">
+                <h3>Saved Teachers</h3>
+                <!-- Teachers will be listed here -->
             </div>
-            <div class="form-group">
-                <input type="text" id="last-name" placeholder="Last Name" required>
-            </div>
-            <div class="form-group">
-                <input type="email" id="email" placeholder="Email Address" required>
-            </div>
-            <div class="form-group">
-                <input type="tel" id="phone" placeholder="Phone Number" required>
-            </div>
-            <button type="submit" class="save-btn">Save Teacher</button>
-        </form>
-        
-        <div class="teacher-list" id="teacher-list">
-            <h3>Saved Teachers</h3>
-            <!-- Teachers will be listed here -->
         </div>
-    </div>
+
+        <!-- Allot Class Section -->
+        <div id="allot-class" class="manage-teachers" style="display: none;">
+            <h2>Allot Class to Teacher</h2>
+            <div class="form-group">
+                <label for="assignment-teacher">Select Teacher:</label>
+                <select id="assignment-teacher" required>
+                    <option value="">Select Teacher</option>
+                </select>
+            </div>
     
-    <!-- Allot Class Subsection -->
-    <div id="allot-class" class="teacher-subsection" style="display: none;">
-    <h2>Allot Class to Teacher</h2>
+            <div class="form-group">
+                <label for="assignment-class">Select Class:</label>
+                <select id="assignment-class" required>
+                    <option value="">Select Class</option>
+                </select>
+            </div>
     
-    <div class="form-group">
-        <label for="assignment-teacher">Select Teacher:</label>
-        <select id="assignment-teacher" required>
-            <option value="">Select Teacher</option>
-        </select>
-    </div>
+            <div id="semester-checkboxes" style="display: none;">
+                <h4>Select Semesters:</h4>
+                <!-- Semesters will be populated here -->
+            </div>
     
-    <div class="form-group">
-        <label for="assignment-class">Select Class:</label>
-        <select id="assignment-class" required>
-            <option value="">Select Class</option>
-        </select>
-    </div>
+            <div id="subject-checkboxes" style="display: none;">
+                <h4>Select Subjects:</h4>
+                <!-- Subjects will be populated here -->
+            </div>
     
-    <div id="semester-checkboxes" style="display: none;">
-        <h4>Select Semesters:</h4>
-        <!-- Semesters will be populated here -->
-    </div>
+            <button onclick="assignTeacher()" class="btn">Assign Teacher</button>
     
-    <div id="subject-checkboxes" style="display: none;">
-        <h4>Select Subjects:</h4>
-        <!-- Subjects will be populated here -->
-    </div>
-    
-    <button onclick="assignTeacher()" class="btn">Assign Teacher</button>
-    
-    <div id="teacher-assignments">
-        <!-- Existing assignments will be shown here -->
-    </div>
-    </div>
+            <div id="teacher-assignments">
+                <!-- Existing assignments will be shown here -->
+            </div>
+        </div>
+
         <!-- Manage Students Section -->
         <div id="manage-students" class="manage-students" style="display: none;">
             <h2>Create Student</h2>
@@ -175,13 +176,55 @@
                 <input type="number" id="student-roll-no" placeholder="Roll No" required>
                 <input type="email" id="student-email" placeholder="Email Address" required>
                 <input type="tel" id="student-phone" placeholder="Phone Number" required>
-                <select id="student-class" required>
+                <select id="student-class" required onchange="loadSemestersForAdmission(this.value)">
                     <option value="">Select Class</option>
                 </select>
+                <select id="admission-semester" required disabled>
+                    <option value="">Select Admission Semester</option>
+                </select>
+                <input type="date" id="admission-date" required>
                 <button type="submit">Save Student</button>
             </form>
             <div class="student-list" id="student-list">
                 <h2>Saved Students</h2>
+            </div>
+        </div>
+
+        <!-- Manage Subjects Section -->
+        <div id="manage-subjects" class="main-content-section" style="display: none;">
+            <h2>Manage Subjects</h2>
+    
+            <div class="subject-form">
+                <h3>Add New Subject</h3>
+                <form id="subject-form">
+                    <div class="form-group">
+                        <label for="subject-class-select">Select Class:</label>
+                        <select id="subject-class-select" required>
+                            <option value="">Select Class</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="subject-semester-select">Select Semester:</label>
+                        <select id="subject-semester-select" required disabled>
+                            <option value="">Select Semester</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="subject-name">Subject Name:</label>
+                        <input type="text" id="subject-name" required>
+                    </div>
+                    
+                    <button type="submit" class="btn">Save Subject</button>
+                </form>
+            </div>
+    
+            <div class="subject-list">
+                <h3>Saved Subjects</h3>
+                <div id="subject-list-container">
+                    <!-- Subjects will be listed here -->
+                </div>
             </div>
         </div>
 
