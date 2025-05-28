@@ -8,35 +8,45 @@
 </head>
 <body>
     <!-- Sidebar -->
-    <div class="sidebar">
-        <h2>Admin Panel</h2>
-        <ul>
-            <li><a href="#dashboard" onclick="showSection('dashboard')">Dashboard</a></li>
-            <li class="has-submenu" aria-haspopup="true" aria-expanded="false">
-                <a href="#" onclick="toggleSubmenu(this.parentElement, event)">Manage Classes</a>
-                <ul class="submenu">
-                    <li><a href="#create-class" onclick="showSection('create-class')">Create Class</a></li>
-                    <li><a href="#add-semesters" onclick="showSection('add-semesters')">Add Semesters</a></li>
-                </ul>
-            </li>
-            <li class="has-submenu" aria-haspopup="true" aria-expanded="false">
-                <a href="#" onclick="toggleSubmenu(this.parentElement, event)">Manage Teachers</a>
-                <ul class="submenu">
-                    <li><a href="#create-teacher" onclick="showSection('create-teacher')">Create Teacher</a></li>
-                    <li><a href="#allot-class" onclick="showSection('allot-class')">Allot Class</a></li>
-                </ul>
-            </li>
-            <li><a href="#manage-students" onclick="showSection('manage-students')">Manage Students</a></li>
-            <li class="has-submenu" onclick="toggleSubmenu(this, event)">
-                <a href="#"><i class="fas fa-book"></i> Manage Subjects</a>
-                <ul class="submenu">
-                    <li><a href="#" onclick="showSection('manage-subjects')">Create Subjects</a></li>
-                </ul>
-            </li>
-            <li><a href="#attendance" onclick="showSection('attendance')">Attendance</a></li>
-            <li><a href="#">Settings</a></li>
-        </ul>
-    </div>
+    <!-- Update your sidebar navigation -->
+<div class="sidebar">
+    <h2>Admin Panel</h2>
+    <ul>
+        <li><a href="#dashboard" onclick="showSection('dashboard')">Dashboard</a></li>
+        <li class="has-submenu" aria-haspopup="true" aria-expanded="false">
+            <a href="#" onclick="toggleSubmenu(this.parentElement, event)">Manage Classes</a>
+            <ul class="submenu">
+                <li><a href="#create-class" onclick="showSection('create-class')">Create Class</a></li>
+                <li><a href="#saved-classes" onclick="showSection('saved-classes')">Saved Classes</a></li>
+                <li><a href="#add-semesters" onclick="showSection('add-semesters')">Add Semesters</a></li>
+            </ul>
+        </li>
+        <li class="has-submenu" aria-haspopup="true" aria-expanded="false">
+            <a href="#" onclick="toggleSubmenu(this.parentElement, event)">Manage Teachers</a>
+            <ul class="submenu">
+                <li><a href="#create-teacher" onclick="showTeacherSubSection('create-teacher')">Create Teacher</a></li>
+                <li><a href="#allot-class" onclick="showTeacherSubSection('allot-class')">Allot Class</a></li>
+                <li><a href="#saved-teachers" onclick="showTeacherSubSection('saved-teachers')">Saved Teachers</a></li>
+            </ul>
+        </li>
+        <li class="has-submenu" aria-haspopup="true" aria-expanded="false">
+            <a href="#" onclick="toggleSubmenu(this.parentElement, event)">Manage Students</a>
+            <ul class="submenu">
+                <li><a href="#create-student" onclick="showStudentSubSection('create-student')">Create Student</a></li>
+                <li><a href="#saved-students" onclick="showStudentSubSection('saved-students')">Saved Students</a></li>
+            </ul>
+        </li>
+        <li class="has-submenu" aria-haspopup="true" aria-expanded="false">
+            <a href="#" onclick="toggleSubmenu(this.parentElement, event)">Manage Subjects</a>
+            <ul class="submenu">
+                <li><a href="#create-subject" onclick="showSubjectSubSection('create-subject')">Create Subject</a></li>
+                <li><a href="#saved-subjects" onclick="showSubjectSubSection('saved-subjects')">Saved Subjects</a></li>
+            </ul>
+        </li>
+        <li><a href="#attendance" onclick="showSection('attendance')">Attendance</a></li>
+        <li><a href="#">Settings</a></li>
+    </ul>
+</div>
 
     <!-- Main Content -->
     <div class="main-content">
@@ -85,117 +95,120 @@
             </div>
         </div>
 
-        <!-- Add Semesters Section -->
+       <!-- Update Add Semesters section (remove saved classes list) -->
         <div id="add-semesters" class="manage-classes" style="display: none;">
             <div class="class-management-container">
                 <div class="create-semester-section">
-                <h2>Add Semester to Class</h2>
-                <select id="semester-class-select" onchange="loadClassSemesters()">
-                    <option value="">Select Class</option>
-                </select>
-                <input type="text" id="semester-name" placeholder="Semester Name">
-                <input type="date" id="semester-start-date" placeholder="Start Date">
-                <input type="date" id="semester-end-date" placeholder="End Date">
-                <button onclick="addSemester()">Add Semester</button>
-            </div>
-        </div>
-            
-            <div class="class-list-container">
-                <h2>Saved Classes & Semesters</h2>
-                <div id="semester-list">
-                    <!-- Classes with semesters will be loaded here -->
+                    <h2>Add Semester to Class</h2>
+                    <select id="semester-class-select" onchange="loadClassSemesters()">
+                        <option value="">Select Class</option>
+                    </select>
+                    <input type="text" id="semester-name" placeholder="Semester Name">
+                    <input type="date" id="semester-start-date" placeholder="Start Date">
+                    <input type="date" id="semester-end-date" placeholder="End Date">
+                    <button onclick="addSemester()">Add Semester</button>
                 </div>
             </div>
         </div>
+
+        <!-- Add this new section for Saved Classes -->
+        <!-- In saved-classes section -->
+        <div id="saved-classes" class="manage-classes" style="display: none;">
+            <div class="class-list-container">
+                <h2>Saved Classes</h2>
+                <div id="saved-class-list">  <!-- Changed ID -->
+                    <!-- Classes will be loaded here with full details -->
+                </div>
+            </div>
+        </div>
+
 
         <!-- Create Teacher Section -->
-        <div id="create-teacher" class="manage-teachers" style="display: none;">
-            <h3>Create Teacher</h3>
-            <form id="teacher-form">
-                <div class="form-group">
-                    <input type="text" id="first-name" placeholder="First Name" required>
+        <div id="manage-teachers" class="manage-teachers" style="display: none;">
+        <!-- Create Teacher Subsection -->
+            <div id="create-teacher" class="teacher-subsection">
+                <h3>Create Teacher</h3>
+                <form id="teacher-form">
+                    <div class="form-group">
+                        <input type="text" id="first-name" placeholder="First Name" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="last-name" placeholder="Last Name" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" id="email" placeholder="Email Address" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="tel" id="phone" placeholder="Phone Number" required>
+                    </div>
+                    <button type="submit" class="save-btn">Save Teacher</button>
+                </form>
+            </div>
+    
+            <!-- Allot Class Subsection -->
+            <div id="allot-class" class="teacher-subsection" style="display: none;">
+                <h2>Allot Class to Teacher</h2>
+                <div class="allot-class-form">
+                    <label for="assignment-teacher">Select Teacher:</label>
+                    <select id="assignment-teacher">
+                        <option value="">Select Teacher</option>
+                    </select>
+                    
+                    <label for="assignment-class">Select Class:</label>
+                    <select id="assignment-class">
+                        <option value="">Select Class</option>
+                    </select>
+                    
+                    <div id="semester-checkboxes" style="display: none;"></div>
+                    <div id="subject-checkboxes" style="display: none;"></div>
+                    
+                    <button onclick="assignTeacher()">Assign Teacher</button>
                 </div>
-                <div class="form-group">
-                    <input type="text" id="last-name" placeholder="Last Name" required>
+            </div>
+            
+            <!-- Add this new Saved Teachers subsection -->
+            <div id="saved-teachers" class="teacher-subsection" style="display: none;">
+                <h2>Saved Teachers</h2>
+                <div class="teacher-list" id="teacher-list">
+                    <!-- Teachers will be listed here with full details -->
                 </div>
-                <div class="form-group">
-                    <input type="email" id="email" placeholder="Email Address" required>
-                </div>
-                <div class="form-group">
-                    <input type="tel" id="phone" placeholder="Phone Number" required>
-                </div>
-                <button type="submit" class="save-btn">Save Teacher</button>
-            </form>
-    
-            <div class="teacher-list" id="teacher-list">
-                <h3>Saved Teachers</h3>
-                <!-- Teachers will be listed here -->
-            </div>
-        </div>
-
-        <!-- Allot Class Section -->
-        <div id="allot-class" class="manage-teachers" style="display: none;">
-            <h2>Allot Class to Teacher</h2>
-            <div class="form-group">
-                <label for="assignment-teacher">Select Teacher:</label>
-                <select id="assignment-teacher" required>
-                    <option value="">Select Teacher</option>
-                </select>
-            </div>
-    
-            <div class="form-group">
-                <label for="assignment-class">Select Class:</label>
-                <select id="assignment-class" required>
-                    <option value="">Select Class</option>
-                </select>
-            </div>
-    
-            <div id="semester-checkboxes" style="display: none;">
-                <h4>Select Semesters:</h4>
-                <!-- Semesters will be populated here -->
-            </div>
-    
-            <div id="subject-checkboxes" style="display: none;">
-                <h4>Select Subjects:</h4>
-                <!-- Subjects will be populated here -->
-            </div>
-    
-            <button onclick="assignTeacher()" class="btn">Assign Teacher</button>
-    
-            <div id="teacher-assignments">
-                <!-- Existing assignments will be shown here -->
             </div>
         </div>
 
         <!-- Manage Students Section -->
         <div id="manage-students" class="manage-students" style="display: none;">
-            <h2>Create Student</h2>
-            <form id="student-form">
-                <input type="text" id="student-first-name" placeholder="First Name" required>
-                <input type="text" id="student-last-name" placeholder="Last Name" required>
-                <input type="number" id="student-roll-no" placeholder="Roll No" required>
-                <input type="email" id="student-email" placeholder="Email Address" required>
-                <input type="tel" id="student-phone" placeholder="Phone Number" required>
-                <select id="student-class" required onchange="loadSemestersForAdmission(this.value)">
-                    <option value="">Select Class</option>
-                </select>
-                <select id="admission-semester" required disabled>
-                    <option value="">Select Admission Semester</option>
-                </select>
-                <input type="date" id="admission-date" required>
-                <button type="submit">Save Student</button>
-            </form>
-            <div class="student-list" id="student-list">
+            <div id="create-student" class="student-subsection">
+                    <h2>Create Student</h2>
+                <form id="student-form">
+                    <input type="text" id="student-first-name" placeholder="First Name" required>
+                    <input type="text" id="student-last-name" placeholder="Last Name" required>
+                    <input type="number" id="student-roll-no" placeholder="Roll No" required>
+                    <input type="email" id="student-email" placeholder="Email Address" required>
+                    <input type="tel" id="student-phone" placeholder="Phone Number" required>
+                    <select id="student-class" required onchange="loadSemestersForAdmission(this.value)">
+                        <option value="">Select Class</option>
+                    </select>
+                    <select id="admission-semester" required disabled>
+                        <option value="">Select Admission Semester</option>
+                    </select>
+                    <input type="date" id="admission-date" required>
+                    <button type="submit">Save Student</button>
+                </form>
+            </div>
+
+             <!-- Saved Students Subsection -->
+            <div id="saved-students" class="student-subsection" style="display: none;">
                 <h2>Saved Students</h2>
+                <div class="student-list" id="student-list">
+                    <!-- Students will be listed here -->
+                </div>
             </div>
         </div>
 
         <!-- Manage Subjects Section -->
         <div id="manage-subjects" class="main-content-section" style="display: none;">
-            <h2>Manage Subjects</h2>
-    
-            <div class="subject-form">
-                <h3>Add New Subject</h3>
+            <div id="create-subject" class="subject-subsection">
+                <h2>Add New Subject</h2>
                 <form id="subject-form">
                     <div class="form-group">
                         <label for="subject-class-select">Select Class:</label>
@@ -220,8 +233,9 @@
                 </form>
             </div>
     
-            <div class="subject-list">
-                <h3>Saved Subjects</h3>
+             <!-- Saved Subjects Subsection -->
+            <div id="saved-subjects" class="subject-subsection" style="display: none;">
+                <h2>Saved Subjects</h2>
                 <div id="subject-list-container">
                     <!-- Subjects will be listed here -->
                 </div>

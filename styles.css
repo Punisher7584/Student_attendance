@@ -978,3 +978,108 @@ input[type="date"] {
 .remove-subject-btn:hover {
     background-color: #ff5252;
 }
+
+/* Add these styles to your existing CSS */
+.class-item {
+    background: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.class-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.semester-list-container {
+    margin-top: 15px;
+}
+
+.semester-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.semester-info {
+    flex: 1;
+}
+
+.semester-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.teacher-item {
+    background: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.teacher-info ul {
+    margin: 5px 0;
+    padding-left: 20px;
+}
+
+.teacher-info li {
+    margin-bottom: 5px;
+}
+
+.teacher-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .class-header, .semester-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .class-actions, .semester-actions {
+        margin-top: 10px;
+        width: 100%;
+    }
+    
+    .class-actions button, .semester-actions button {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+}
+
+
+/* Student and Subject Subsections */
+.student-subsection, .subject-subsection {
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+/* Form styling */
+.student-subsection form, .subject-subsection form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+/* List styling */
+.student-list, #subject-list-container {
+    margin-top: 20px;
+}

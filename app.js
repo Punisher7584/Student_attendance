@@ -64,28 +64,41 @@ window.showSection = function(sectionId) {
         section.style.display = "none";
     });
 
-    // Show the requested section
+    // Handle teacher subsections
+    if (sectionId === "create-teacher" || sectionId === "allot-class" || sectionId === "saved-teachers") {
+        document.getElementById("manage-teachers").style.display = "block";
+        // Hide all teacher subsections
+        document.querySelectorAll('#manage-teachers .teacher-subsection').forEach(sub => {
+            sub.style.display = 'none';
+        });
+        // Show the requested subsection
+        document.getElementById(sectionId).style.display = "block";
+        
+        // Load data if needed
+        if (sectionId === "saved-teachers") {
+            fetchTeachers();
+        }
+        return;
+    }
+
+    // Show the requested main section
     const selectedSection = document.getElementById(sectionId);
     if (selectedSection) {
         selectedSection.style.display = "block";
     }
 
-    // Initialize sections as needed
+    // Initialize sections properly
     if (sectionId === "dashboard") {
         fetchDashboardData();
     }
     else if (sectionId === "create-class") {
-        fetchClasses();
+        // No need to fetch classes here anymore
+    }
+    else if (sectionId === "saved-classes") {
+        fetchClassesWithFullDetails();
     }
     else if (sectionId === "add-semesters") {
         fetchClassesForDropdown("semester-class-select");
-        fetchClassesWithSemesters();
-    }
-    else if (sectionId === "create-teacher") {
-        fetchTeachers();
-    }
-    else if (sectionId === "allot-class") {
-        initializeAllotClassSection();
     }
     else if (sectionId === "manage-students") {
         if (document.getElementById("student-class")) {
@@ -272,6 +285,78 @@ async function fetchClassesWithSemesters() {
     }
 }
 
+async function fetchClassesWithFullDetails() {
+    const classList = document.getElementById("saved-class-list");
+    classList.innerHTML = "";
+
+    try {
+        const classesSnapshot = await getDocs(collection(db, "classes"));
+        if (classesSnapshot.empty) {
+            classList.innerHTML = "<p>No classes found.</p>";
+        } else {
+            classesSnapshot.forEach(async (doc) => {
+                const classData = doc.data();
+                const classItem = document.createElement("div");
+                classItem.className = "class-item";
+                
+                // Class header with name and actions
+                const classHeader = document.createElement("div");
+                classHeader.className = "class-header";
+                classHeader.innerHTML = `
+                    <h3>${classData.name}</h3>
+                    <div class="class-actions">
+                        <button class="edit-btn" onclick="editClassName('${doc.id}', '${classData.name}')">Edit Class Name</button>
+                        <button class="delete-btn" onclick="deleteClass('${doc.id}')">Delete Class</button>
+                    </div>
+                `;
+                
+                // Semesters list
+                const semesterListContainer = document.createElement("div");
+                semesterListContainer.className = "semester-list-container";
+                
+                if (classData.semesters && Object.keys(classData.semesters).length > 0) {
+                    semesterListContainer.innerHTML = "<h4>Semesters:</h4>";
+                    const semesterUl = document.createElement("ul");
+                    
+                    for (const [semesterId, semesterData] of Object.entries(classData.semesters)) {
+                        const semesterItem = document.createElement("li");
+                        semesterItem.className = "semester-item";
+                        
+                        const startDate = new Date(semesterData.startDate).toLocaleDateString();
+                        const endDate = new Date(semesterData.endDate).toLocaleDateString();
+                        
+                        semesterItem.innerHTML = `
+                            <div class="semester-info">
+                                <strong>${semesterData.name}</strong>
+                                <p>Dates: ${startDate} to ${endDate}</p>
+                                ${semesterData.subjects && Object.keys(semesterData.subjects).length > 0 ? 
+                                    `<p>Subjects: ${Object.values(semesterData.subjects).join(", ")}</p>` : 
+                                    '<p>No subjects added</p>'}
+                            </div>
+                            <div class="semester-actions">
+                                <button class="edit-btn" onclick="editSemester('${doc.id}', '${semesterId}', '${semesterData.name}', '${semesterData.startDate}', '${semesterData.endDate}')">Edit</button>
+                                <button class="delete-btn" onclick="deleteSemester('${doc.id}', '${semesterId}')">Delete</button>
+                            </div>
+                        `;
+                        semesterUl.appendChild(semesterItem);
+                    }
+                    
+                    semesterListContainer.appendChild(semesterUl);
+                } else {
+                    semesterListContainer.innerHTML = "<p>No semesters added yet.</p>";
+                }
+                
+                classItem.appendChild(classHeader);
+                classItem.appendChild(semesterListContainer);
+                classList.appendChild(classItem);
+            });
+        }
+    } catch (error) {
+        console.error("Error fetching classes:", error);
+        classList.innerHTML = "<p class='error'>Error loading classes.</p>";
+    }
+}
+
 
 async function fetchClasses() {
     const classList = document.getElementById("class-list");
@@ -305,18 +390,18 @@ async function fetchClasses() {
 }
 
 
-window.editClass = async function(id, currentName) {
+window.editClassName = async function(id, currentName) {
     const newName = prompt("Enter new class name:", currentName);
     if (newName && newName.trim() !== "") {
         try {
             await updateDoc(doc(db, "classes", id), { name: newName });
-            fetchClasses();
-            alert("Class updated successfully!");
+            fetchClassesWithFullDetails();
+            alert("Class name updated successfully!");
         } catch (error) {
             console.error("Error updating class:", error);
             alert("Error updating class. Please try again.");
         }
-    }   
+    }
 };
 
 window.deleteClass = async function(id) {
@@ -388,15 +473,21 @@ window.addSemester = async function() {
 };
 
 
-window.editSemester = async function(classId, semesterId, currentName) {
+window.editSemester = async function(classId, semesterId, currentName, currentStartDate, currentEndDate) {
     const newName = prompt("Enter new semester name:", currentName);
-    if (newName && newName.trim() !== "") {
+    const newStartDate = prompt("Enter new start date (YYYY-MM-DD):", currentStartDate);
+    const newEndDate = prompt("Enter new end date (YYYY-MM-DD):", currentEndDate);
+    
+    if (newName && newStartDate && newEndDate) {
         try {
-            const classRef = doc(db, "classes", classId);
-            await updateDoc(classRef, {
-                [`semesters.${semesterId}.name`]: newName
-            });
-            fetchClassesWithSemesters(); // Update the semester list
+            const updates = {
+                [`semesters.${semesterId}.name`]: newName,
+                [`semesters.${semesterId}.startDate`]: newStartDate,
+                [`semesters.${semesterId}.endDate`]: newEndDate
+            };
+            
+            await updateDoc(doc(db, "classes", classId), updates);
+            fetchClassesWithFullDetails();
             alert("Semester updated successfully!");
         } catch (error) {
             console.error("Error updating semester:", error);
@@ -446,28 +537,37 @@ window.loadClassSemesters = async function() {
 // Add this function to initialize the allot class section
 async function initializeAllotClassSection() {
     try {
+        // Only proceed if the elements exist
+        const teacherSelect = document.getElementById("assignment-teacher");
+        const classSelect = document.getElementById("assignment-class");
+        
+        if (!teacherSelect || !classSelect) {
+            console.error("Required elements not found");
+            return;
+        }
+        
         await fetchTeachersForDropdown();
         await fetchClassesForDropdown("assignment-class");
         await fetchTeacherAssignments();
         
         // Set up event listeners
-        const classSelect = document.getElementById("assignment-class");
-        if (classSelect) {
-            classSelect.addEventListener("change", function() {
-                const classId = this.value;
-                if (classId) {
-                    loadSemesterCheckboxes(classId);
-                } else {
-                    document.getElementById("semester-checkboxes").style.display = "none";
-                    document.getElementById("subject-checkboxes").style.display = "none";
-                }
-            });
-        }
+        classSelect.addEventListener("change", function() {
+            const classId = this.value;
+            if (classId) {
+                loadSemesterCheckboxes(classId);
+            } else {
+                const semesterContainer = document.getElementById("semester-checkboxes");
+                const subjectContainer = document.getElementById("subject-checkboxes");
+                if (semesterContainer) semesterContainer.style.display = "none";
+                if (subjectContainer) subjectContainer.style.display = "none";
+            }
+        });
     } catch (error) {
         console.error("Error initializing allot class section:", error);
         alert("Error initializing teacher assignment section. Please try again.");
     }
 }
+
 
 async function loadSemesterCheckboxes(classId) {
     const semesterContainer = document.getElementById("semester-checkboxes");
@@ -597,10 +697,7 @@ window.saveTeacher = async function(event) {
 
 async function fetchTeachers() {
     const teacherList = document.getElementById("teacher-list");
-    if (!teacherList) {
-        console.error("Teacher list element not found");
-        return;
-    }
+    if (!teacherList) return;
 
     teacherList.innerHTML = "<h3>Saved Teachers</h3>";
     
@@ -612,15 +709,29 @@ async function fetchTeachers() {
             return;
         }
 
+        // Get classes data for reference
+        const classesSnapshot = await getDocs(collection(db, "classes"));
+        const classesMap = new Map();
+        classesSnapshot.forEach(doc => {
+            classesMap.set(doc.id, doc.data());
+        });
+
         teachersSnapshot.forEach((doc) => {
             const teacherData = doc.data();
             const teacherItem = document.createElement("div");
             teacherItem.className = "teacher-item";
             
-            // Display assigned semesters
-            let semestersHtml = "<p>No semesters assigned</p>";
+            // Basic info
+            let html = `
+                <div class="teacher-info">
+                    <h4>${teacherData.firstName} ${teacherData.lastName}</h4>
+                    <p>Email: ${teacherData.email}</p>
+                    <p>Phone: ${teacherData.phone}</p>
+            `;
+            
+            // Assigned semesters
             if (teacherData.assignedSemesters && teacherData.assignedSemesters.length > 0) {
-                semestersHtml = "<h5>Assigned Semesters:</h5><ul>";
+                html += `<h5>Assigned Semesters:</h5><ul>`;
                 
                 // Group by class
                 const groupedByClass = {};
@@ -632,16 +743,17 @@ async function fetchTeachers() {
                 });
                 
                 for (const [className, semesterNames] of Object.entries(groupedByClass)) {
-                    semestersHtml += `<li><strong>${className}:</strong> ${semesterNames.join(", ")}</li>`;
+                    html += `<li><strong>${className}:</strong> ${semesterNames.join(", ")}</li>`;
                 }
                 
-                semestersHtml += "</ul>";
+                html += `</ul>`;
+            } else {
+                html += `<p>No semesters assigned</p>`;
             }
             
-            // Display assigned subjects
-            let subjectsHtml = "<p>No subjects assigned</p>";
+            // Assigned subjects
             if (teacherData.assignedSubjects && teacherData.assignedSubjects.length > 0) {
-                subjectsHtml = "<h5>Assigned Subjects:</h5><ul>";
+                html += `<h5>Assigned Subjects:</h5><ul>`;
                 
                 // Group by class and semester
                 const groupedSubjects = {};
@@ -654,25 +766,22 @@ async function fetchTeachers() {
                 });
                 
                 for (const [group, subjects] of Object.entries(groupedSubjects)) {
-                    subjectsHtml += `<li><strong>${group}:</strong> ${subjects.join(", ")}</li>`;
+                    html += `<li><strong>${group}:</strong> ${subjects.join(", ")}</li>`;
                 }
                 
-                subjectsHtml += "</ul>";
+                html += `</ul>`;
+            } else {
+                html += `<p>No subjects assigned</p>`;
             }
             
-            teacherItem.innerHTML = `
-                <div class="teacher-info">
-                    <h4>${teacherData.firstName} ${teacherData.lastName}</h4>
-                    <p>Email: ${teacherData.email}</p>
-                    <p>Phone: ${teacherData.phone}</p>
-                    ${semestersHtml}
-                    ${subjectsHtml}
-                </div>
+            html += `</div>
                 <div class="teacher-actions">
                     <button class="edit-btn" onclick="editTeacher('${doc.id}')">Edit</button>
                     <button class="delete-btn" onclick="deleteTeacher('${doc.id}')">Delete</button>
                 </div>
             `;
+            
+            teacherItem.innerHTML = html;
             teacherList.appendChild(teacherItem);
         });
     } catch (error) {
@@ -680,6 +789,7 @@ async function fetchTeachers() {
         teacherList.innerHTML += `<p class="error">Error loading teachers: ${error.message}</p>`;
     }
 }
+
 
 
 // Add this function to load semesters when a class is selected
@@ -1180,7 +1290,31 @@ window.removeSubjectFromTeacher = async function(teacherId, subjectId) {
     }
 };
 
+window.showTeacherSubSection = function(subSectionId) {
+    // Hide all top-level sections
+    document.querySelectorAll('.main-content > div').forEach(div => {
+        div.style.display = 'none';
+    });
 
+    // Show the parent section for teacher management
+    document.getElementById('manage-teachers').style.display = 'block';
+
+    // Hide all subsections
+    const subsections = document.querySelectorAll('#manage-teachers .teacher-subsection');
+    subsections.forEach(sub => sub.style.display = 'none');
+
+    // Show only the selected subsection
+    document.getElementById(subSectionId).style.display = 'block';
+    
+    // Load appropriate data
+    if (subSectionId === 'create-teacher') {
+        // No need to load anything special
+    } else if (subSectionId === 'allot-class') {
+        initializeAllotClassSection();
+    } else if (subSectionId === 'saved-teachers') {
+        fetchTeachers();
+    }
+};
 
 // Student Management Functions
 window.saveStudent = async function(event) {
@@ -1223,11 +1357,16 @@ window.saveStudent = async function(event) {
         console.error("Error saving student:", error);
         alert("Error saving student. Please try again.");
     }
+    showStudentSubSection('saved-students'); // Redirect to saved students after saving
+    fetchStudents();
 };
 
 async function fetchStudents() {
     const studentList = document.getElementById("student-list");
-    studentList.innerHTML = "<h2>Saved Students</h2>";
+    if (!studentList) return;  // Only proceed if the element exists
+    
+    studentList.innerHTML = "";
+    // Rest of your existing fetchStudents function..
 
     try {
         const studentsSnapshot = await getDocs(collection(db, "students"));
@@ -1547,6 +1686,74 @@ window.loadSemestersForAdmission = async function(classId) {
 // // You can call this from your admin dashboard initialization
 // // or set up a Cloud Function to run it automatically
 // setInterval(checkAndPromoteStudents, 24 * 60 * 60 * 1000); // Run daily
+
+window.showStudentSubSection = function(subSectionId) {
+    // Hide all main sections
+    const mainSections = document.querySelectorAll('.main-content > div');
+    if (mainSections) {
+        mainSections.forEach(div => {
+            if (div) div.style.display = 'none';
+        });
+    }
+
+    // Show the parent section for student management
+    const manageStudents = document.getElementById('manage-students');
+    if (manageStudents) manageStudents.style.display = 'block';
+
+    // Hide all student subsections
+    const studentSubsections = document.querySelectorAll('#manage-students .student-subsection');
+    if (studentSubsections) {
+        studentSubsections.forEach(sub => {
+            if (sub) sub.style.display = 'none';
+        });
+    }
+
+    // Show only the selected subsection
+    const selectedSubsection = document.getElementById(subSectionId);
+    if (selectedSubsection) selectedSubsection.style.display = 'block';
+    
+    // Load appropriate data
+    if (subSectionId === 'create-student') {
+        fetchClassesForDropdown("student-class");
+    } else if (subSectionId === 'saved-students') {
+        fetchStudents();
+    }
+};
+
+
+// For Subject Subsections
+window.showSubjectSubSection = function(subSectionId) {
+    // Hide all main sections
+    const mainSections = document.querySelectorAll('.main-content > div');
+    if (mainSections) {
+        mainSections.forEach((section) => {
+            if (section) section.style.display = 'none';
+        });
+    }
+
+    // Show the parent section for subject management
+    const manageSubjects = document.getElementById('manage-subjects');
+    if (manageSubjects) manageSubjects.style.display = 'block';
+
+    // Hide all subject subsections
+    const subsections = document.querySelectorAll('#manage-subjects .subject-subsection');
+    if (subsections) {
+        subsections.forEach(sub => {
+            if (sub) sub.style.display = 'none';
+        });
+    }
+
+    // Show only the selected subsection
+    const selectedSubsection = document.getElementById(subSectionId);
+    if (selectedSubsection) selectedSubsection.style.display = 'block';
+    
+    // Load appropriate data
+    if (subSectionId === 'create-subject') {
+        fetchClassesForDropdown("subject-class-select");
+    } else if (subSectionId === 'saved-subjects') {
+        fetchAllSubjects();
+    }
+};
 
 
 // Attendance Management Functions
@@ -1908,12 +2115,17 @@ document.getElementById("subject-form").addEventListener("submit", async functio
         console.error("Error adding subject:", error);
         alert("Error adding subject. Please try again.");
     }
+    showSubjectSubSection('saved-subjects'); // Redirect to saved subjects after saving
+    fetchAllSubjects();
 });
 
 // Fetch all subjects from all classes and semesters
 async function fetchAllSubjects() {
-    const subjectListContainer = document.getElementById("subject-list-container");
+   const subjectListContainer = document.getElementById("subject-list-container");
+    if (!subjectListContainer) return;  // Only proceed if the element exists
+    
     subjectListContainer.innerHTML = "";
+    // Rest of your existing fetchAllSubjects function..
     
     try {
         const classesSnapshot = await getDocs(collection(db, "classes"));
